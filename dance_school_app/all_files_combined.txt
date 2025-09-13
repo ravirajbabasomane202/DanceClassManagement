@@ -1016,6 +1016,7 @@ h1, h2, h3, h4, h5, h6 {
     border-top-right-radius: 10px;
 }
 .card-title {
+    color: #004aad;
     margin-bottom: 0;
 }
 .card-body {
@@ -1186,6 +1187,7 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     padding: 1rem;
     animation: fadeIn 1s ease-in-out;
+    overflow: hidden;
 }
 
 @keyframes fadeIn {
@@ -1213,22 +1215,30 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 15px;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
     transition: transform 0.3s, box-shadow 0.3s;
+    margin-bottom: 1rem;
 }
 
 .card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-5px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* Dashboard Sections */
 .dashboard-section {
     margin-bottom: 3rem;
+    padding: 1rem;
+    background-color: #f8f9fa; /* Light background for sections */
+    border-radius: 10px;
 }
 
 /* Interactive Hover Effects */
 .table-hover tbody tr:hover {
     background-color: rgba(255, 111, 97, 0.1); /* Coral hover */
     cursor: pointer;
+}
+
+.row > .col-md-6 > .card {
+    height: auto !important; /* Override any h-100 */
 }
 ==================================================
 
@@ -1424,7 +1434,7 @@ File: .\app\templates\admin_dashboard.html
     <!-- Summary Cards -->
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mb-5">
         <div class="col">
-            <div class="card text-center h-100">
+            <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">Total Students</h5>
                     <p class="card-text display-4">{{ total_students }}</p>
@@ -1433,7 +1443,7 @@ File: .\app\templates\admin_dashboard.html
             </div>
         </div>
         <div class="col">
-            <div class="card text-center h-100">
+            <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">Active Staff</h5>
                     <p class="card-text display-4">{{ total_staff }}</p>
@@ -1442,7 +1452,7 @@ File: .\app\templates\admin_dashboard.html
             </div>
         </div>
         <div class="col">
-            <div class="card text-center h-100">
+            <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">Total Batches</h5>
                     <p class="card-text display-4">{{ total_batches }}</p>
@@ -1451,7 +1461,7 @@ File: .\app\templates\admin_dashboard.html
             </div>
         </div>
         <div class="col">
-            <div class="card text-center h-100">
+            <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">Unpaid Payments</h5>
                     <p class="card-text display-4">{{ unpaid_payments }}</p>
@@ -1466,18 +1476,22 @@ File: .\app\templates\admin_dashboard.html
         <h2 class="mb-3">Analytics</h2>
         <div class="row">
             <div class="col-lg-6 mb-4">
-                <div class="card h-100">
+                <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Students by Class Type</h5>
-                        <canvas id="studentsByClassChart" class="chart-interactive" data-url="{{ url_for('main.student_list') }}" aria-label="Students by Class Type Pie Chart"></canvas>
+                        <div class="chart-container">
+                            <canvas id="studentsByClassChart" class="chart-interactive" data-url="{{ url_for('main.student_list') }}" aria-label="Students by Class Type Pie Chart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-6 mb-4">
-                <div class="card h-100">
+                <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Payments by Status</h5>
-                        <canvas id="paymentsStatusChart" class="chart-interactive" data-url="{{ url_for('main.payment_list') }}" aria-label="Payments by Status Bar Chart"></canvas>
+                        <div class="chart-container">
+                            <canvas id="paymentsStatusChart" class="chart-interactive" data-url="{{ url_for('main.payment_list') }}" aria-label="Payments by Status Bar Chart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1485,63 +1499,65 @@ File: .\app\templates\admin_dashboard.html
     </div>
 
     <!-- Quick Actions -->
-    <h2 class="mb-3">Quick Actions</h2>
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Manage Students</h5>
-                    <p class="card-text">Register, edit, or deactivate students.</p>
-                    <a href="{{ url_for('main.register_student') }}" class="btn btn-outline-primary">Add Student</a>
-                    <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-secondary">List Students</a>
+    <div class="dashboard-section">
+        <h2 class="mb-3">Quick Actions</h2>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Students</h5>
+                        <p class="card-text">Register, edit, or deactivate students.</p>
+                        <a href="{{ url_for('main.register_student') }}" class="btn btn-primary">Add Student</a>
+                        <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-secondary">List Students</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Manage Staff</h5>
-                    <p class="card-text">Register or view staff members.</p>
-                    <a href="{{ url_for('main.register_staff') }}" class="btn btn-outline-primary">Add Staff</a>
-                    <a href="{{ url_for('main.staff_list') }}" class="btn btn-outline-secondary">List Staff</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Staff</h5>
+                        <p class="card-text">Register or view staff members.</p>
+                        <a href="{{ url_for('main.register_staff') }}" class="btn btn-primary">Add Staff</a>
+                        <a href="{{ url_for('main.staff_list') }}" class="btn btn-outline-secondary">List Staff</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Manage Batches</h5>
-                    <p class="card-text">Create or assign students to batches.</p>
-                    <a href="{{ url_for('main.create_batch') }}" class="btn btn-outline-primary">Create Batch</a>
-                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-secondary">List Batches</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Batches</h5>
+                        <p class="card-text">Create or assign students to batches.</p>
+                        <a href="{{ url_for('main.create_batch') }}" class="btn btn-primary">Create Batch</a>
+                        <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-secondary">List Batches</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Attendance</h5>
-                    <p class="card-text">View or mark attendance for batches.</p>
-                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary">Mark Attendance</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Attendance</h5>
+                        <p class="card-text">View or mark attendance for batches.</p>
+                        <a href="{{ url_for('main.batch_list') }}" class="btn btn-primary">Mark Attendance</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Payments</h5>
-                    <p class="card-text">Update or view payment statuses.</p>
-                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-outline-primary">View Payments</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Payments</h5>
+                        <p class="card-text">Update or view payment statuses.</p>
+                        <a href="{{ url_for('main.payment_list') }}" class="btn btn-primary">View Payments</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Reports</h5>
-                    <p class="card-text">Export student lists or attendance reports.</p>
-                    <a href="{{ url_for('main.export_students') }}" class="btn btn-outline-primary">Export Students</a>
-                    <a href="{{ url_for('main.export_attendance') }}" class="btn btn-outline-secondary">Export Attendance</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Reports</h5>
+                        <p class="card-text">Export student lists or attendance reports.</p>
+                        <a href="{{ url_for('main.export_students') }}" class="btn btn-primary">Export Students</a>
+                        <a href="{{ url_for('main.export_attendance') }}" class="btn btn-outline-secondary">Export Attendance</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1564,7 +1580,7 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true, // Changed to true to prevent resize issues
             plugins: {
                 legend: { position: 'top' },
                 tooltip: { enabled: true }
@@ -1586,8 +1602,13 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            maintainAspectRatio: true, // Changed to true
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { stepSize: 1 } 
+                } 
+            }
         }
     });
 });
@@ -2901,18 +2922,22 @@ File: .\app\templates\staff_dashboard.html
         <h2 class="mb-3">Analytics</h2>
         <div class="row">
             <div class="col-lg-6 mb-4">
-                <div class="card h-100">
+                <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Students per Batch</h5>
-                        <canvas id="studentsPerBatchChart" class="chart-interactive" data-url="{{ url_for('main.batch_list') }}" aria-label="Students per Batch Bar Chart"></canvas>
+                        <div class="chart-container">
+                            <canvas id="studentsPerBatchChart" class="chart-interactive" data-url="{{ url_for('main.batch_list') }}" aria-label="Students per Batch Bar Chart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-6 mb-4">
-                <div class="card h-100">
+                <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Attendance Summary</h5>
-                        <canvas id="attendanceSummaryChart" class="chart-interactive" data-url="{{ url_for('main.batch_list') }}" aria-label="Attendance Summary Doughnut Chart"></canvas>
+                        <div class="chart-container">
+                            <canvas id="attendanceSummaryChart" class="chart-interactive" data-url="{{ url_for('main.batch_list') }}" aria-label="Attendance Summary Doughnut Chart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2920,56 +2945,81 @@ File: .\app\templates\staff_dashboard.html
     </div>
 
     <!-- Quick Actions -->
-    <h2 class="mb-3">Quick Actions</h2>
-    <div class="card">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-primary w-100">Manage Students</a>
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Quick Actions</h2>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Students</h5>
+                        <p class="card-text">View or register students.</p>
+                        <a href="{{ url_for('main.student_list') }}" class="btn btn-primary">View Students</a>
+                        <a href="{{ url_for('main.register_student') }}" class="btn btn-outline-secondary">Add Student</a>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary w-100">Manage Batches</a>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Batches</h5>
+                        <p class="card-text">View your assigned batches.</p>
+                        <a href="{{ url_for('main.batch_list') }}" class="btn btn-primary">View Batches</a>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-outline-primary w-100">Manage Payments</a>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Payments</h5>
+                        <p class="card-text">View or update payment statuses.</p>
+                        <a href="{{ url_for('main.payment_list') }}" class="btn btn-primary">View Payments</a>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary w-100">Mark Attendance</a>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Mark Attendance</h5>
+                        <p class="card-text">Record attendance for your batches.</p>
+                        <a href="{{ url_for('main.batch_list') }}" class="btn btn-primary">Mark Attendance</a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Assigned Batches -->
-    <h2 class="mt-5 mb-3">Your Assigned Batches</h2>
-    {% if batches %}
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Batch Name</th>
-                        <th>Fee (Monthly)</th>
-                        <th>Student Count</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for batch in batches %}
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Your Assigned Batches</h2>
+        {% if batches %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
                         <tr>
-                            <td>{{ batch.name }}</td>
-                            <td>${{ "%.2f" % batch.fee_monthly }}</td>
-                            <td>{{ batch.students|length }}</td>
-                            <td>
-                                <a href="{{ url_for('main.mark_attendance', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">Mark Attendance</a>
-                            </td>
+                            <th>Batch Name</th>
+                            <th>Fee (Monthly)</th>
+                            <th>Student Count</th>
+                            <th>Actions</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="text-muted">No batches assigned.</p>
-    {% endif %}
+                    </thead>
+                    <tbody>
+                        {% for batch in batches %}
+                            <tr>
+                                <td>{{ batch.name }}</td>
+                                <td>${{ "%.2f" % batch.fee_monthly }}</td>
+                                <td>{{ batch.students|length }}</td>
+                                <td>
+                                    <a href="{{ url_for('main.mark_attendance', batch_id=batch.id) }}" class="btn btn-sm btn-primary">Mark Attendance</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No batches assigned.</p>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Inline Script for Charts -->
@@ -2989,8 +3039,13 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            maintainAspectRatio: true, // Changed to true to prevent resize issues
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { stepSize: 1 } 
+                } 
+            }
         }
     });
 
@@ -3007,7 +3062,7 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true, // Changed to true
         }
     });
 });
@@ -3101,7 +3156,7 @@ File: .\app\templates\student_dashboard.html
         <div class="col-md-4 mb-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <h5 class="card-title">Recent Attendance</h5>
+                    <h5 class="card-title">Present Days (Last 30)</h5>
                     <p class="card-text display-4">{{ recent_attendance }}</p>
                 </div>
             </div>
@@ -3121,18 +3176,22 @@ File: .\app\templates\student_dashboard.html
         <h2 class="mb-3">Your Analytics</h2>
         <div class="row">
             <div class="col-lg-6 mb-4">
-                <div class="card h-100">
+                <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Attendance (Last 30 Days)</h5>
-                        <canvas id="attendanceTrendChart" class="chart-interactive" data-url="{{ url_for('main.student_dashboard') }}" aria-label="Attendance Trend Line Chart"></canvas>
+                        <div class="chart-container">
+                            <canvas id="attendanceTrendChart" class="chart-interactive" data-url="{{ url_for('main.student_dashboard') }}" aria-label="Attendance Trend Line Chart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-6 mb-4">
-                <div class="card h-100">
+                <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Your Payment Status</h5>
-                        <canvas id="studentPaymentsChart" class="chart-interactive" data-url="{{ url_for('main.student_dashboard') }}" aria-label="Payments by Status Pie Chart"></canvas>
+                        <div class="chart-container">
+                            <canvas id="studentPaymentsChart" class="chart-interactive" data-url="{{ url_for('main.student_dashboard') }}" aria-label="Payments by Status Pie Chart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3140,102 +3199,116 @@ File: .\app\templates\student_dashboard.html
     </div>
 
     <!-- Enrolled Batches -->
-    <h2 class="mb-3">Your Enrolled Batches</h2>
-    {% if batches %}
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Batch Name</th>
-                        <th>Instructor</th>
-                        <th>Fee (Monthly)</th>
-                        <th>Class Type</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for batch in batches %}
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Your Enrolled Batches</h2>
+        {% if batches %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
                         <tr>
-                            <td>{{ batch.name }}</td>
-                            <td>{{ batch.staff.name }}</td>
-                            <td>${{ "%.2f" % batch.fee_monthly }}</td>
-                            <td>{{ student.class_type }}</td>
+                            <th>Batch Name</th>
+                            <th>Instructor</th>
+                            <th>Fee (Monthly)</th>
+                            <th>Class Type</th>
+                            <th>Actions</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="text-muted">You are not enrolled in any batches.</p>
-    {% endif %}
+                    </thead>
+                    <tbody>
+                        {% for batch in batches %}
+                            <tr>
+                                <td>{{ batch.name }}</td>
+                                <td>{{ batch.staff.name }}</td>
+                                <td>${{ "%.2f" % batch.fee_monthly }}</td>
+                                <td>{{ student.class_type }}</td>
+                                <td>
+                                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-sm btn-primary">View Batch</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">You are not enrolled in any batches.</p>
+        {% endif %}
+    </div>
 
     <!-- Recent Attendance -->
-    <h2 class="mb-3">Recent Attendance</h2>
-    {% if attendances %}
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Batch</th>
-                        <th>Status</th>
-                        <th>Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for attendance in attendances %}
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Recent Attendance (Last 10 Records)</h2>
+        {% if attendances %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
                         <tr>
-                            <td>{{ attendance.date|datetimeformat('YYYY-MM-DD') }}</td>
-                            <td>{{ attendance.batch.name }}</td>
-                            <td>
-                                <span class="badge {% if attendance.present %}bg-success{% else %}bg-danger{% endif %}">
-                                    {{ 'Present' if attendance.present else 'Absent' }}
-                                </span>
-                            </td>
-                            <td>{{ attendance.notes or 'N/A' }}</td>
+                            <th>Date</th>
+                            <th>Batch</th>
+                            <th>Status</th>
+                            <th>Notes</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="text-muted">No recent attendance records.</p>
-    {% endif %}
+                    </thead>
+                    <tbody>
+                        {% for attendance in attendances %}
+                            <tr>
+                                <td>{{ attendance.date|datetimeformat('YYYY-MM-DD') }}</td>
+                                <td>{{ attendance.batch.name }}</td>
+                                <td>
+                                    <span class="badge {% if attendance.present %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ 'Present' if attendance.present else 'Absent' }}
+                                    </span>
+                                </td>
+                                <td>{{ attendance.notes or 'N/A' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No recent attendance records.</p>
+        {% endif %}
+    </div>
 
     <!-- Payment Status -->
-    <h2 class="mb-3">Payment Status</h2>
-    {% if payments %}
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Batch</th>
-                        <th>Amount</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for payment in payments %}
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Payment Status</h2>
+        {% if payments %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
                         <tr>
-                            <td>{{ payment.batch.name }}</td>
-                            <td>${{ "%.2f" % payment.amount }}</td>
-                            <td>{{ payment.due_date|datetimeformat('YYYY-MM-DD') }}</td>
-                            <td>
-                                <span class="badge 
-                                    {% if payment.status == 'paid' %}bg-success
-                                    {% elif payment.status == 'unpaid' %}bg-danger
-                                    {% else %}bg-warning{% endif %}">
-                                    {{ payment.status|title }}
-                                </span>
-                            </td>
+                            <th>Batch</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="text-muted">No payment records found.</p>
-    {% endif %}
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.batch.name }}</td>
+                                <td>${{ "%.2f" % payment.amount }}</td>
+                                <td>{{ payment.due_date|datetimeformat('YYYY-MM-DD') }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if payment.status == 'paid' %}bg-success
+                                        {% elif payment.status == 'unpaid' %}bg-danger
+                                        {% else %}bg-warning{% endif %}">
+                                        {{ payment.status|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-sm btn-primary">View Payment</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No payment records found.</p>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Inline Script for Charts -->
@@ -3251,20 +3324,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 datasets: [{
                     label: 'Attendance Trend',
                     data: {{ attendance_status | tojson }},
-                    borderColor: '#ff6f61', // From your request
-                    fill: false, // From your request
+                    borderColor: '#ff6f61',
+                    fill: false,
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true, // Changed to true to prevent resize issues
                 scales: {
                     y: {
                         beginAtZero: true,
                         max: 1,
                         ticks: {
                             stepSize: 1,
-                            // This callback makes the Y-axis more readable
                             callback: function(value) {
                                 return value === 1 ? 'Present' : 'Absent';
                             }
@@ -3280,8 +3352,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const paymentCtx = document.getElementById('studentPaymentsChart').getContext('2d');
         const paymentLabels = {{ student_status_labels | map('title') | list | tojson }};
         const paymentData = {{ student_status_counts | tojson }};
-        // Using a color map is more robust than a fixed-order array,
-        // ensuring colors always match the correct status.
         const colorMap = {
             'Paid': '#28a745',
             'Unpaid': '#dc3545',
@@ -3300,7 +3370,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true, // Changed to true
             }
         });
     }
