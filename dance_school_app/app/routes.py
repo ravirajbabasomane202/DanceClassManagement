@@ -3,9 +3,10 @@ from flask_login import login_user, logout_user, current_user, login_required
 from app import db
 from app.models import User, Student, Staff, Batch, Attendance, Payment, StudentBatch
 from app.forms import LoginForm, StudentRegistrationForm, StaffRegistrationForm, AttendanceForm, PaymentForm , BatchForm, AssignStudentForm, PublicStudentRegistrationForm
+from sqlalchemy import func
 from io import BytesIO
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import Blueprint
 import os
 
@@ -67,11 +68,26 @@ def admin_dashboard():
     total_staff = Staff.query.count()
     total_batches = Batch.query.count()
     unpaid_payments = Payment.query.filter_by(status='unpaid').count()
+
+    # Chart Data: Students by Class Type
+    students_by_class = db.session.query(Student.class_type, func.count(Student.id)) \
+        .group_by(Student.class_type).all()
+    class_labels = [row[0] for row in students_by_class]
+    class_counts = [row[1] for row in students_by_class]
+
+    # Chart Data: Payments by Status
+    payments_status = db.session.query(Payment.status, func.count(Payment.id)) \
+        .group_by(Payment.status).all()
+    status_labels = [row[0] for row in payments_status]
+    status_counts = [row[1] for row in payments_status]
+
     return render_template('admin_dashboard.html', 
                          total_students=total_students, 
                          total_staff=total_staff, 
                          total_batches=total_batches, 
-                         unpaid_payments=unpaid_payments)
+                         unpaid_payments=unpaid_payments,
+                         class_labels=class_labels, class_counts=class_counts,
+                         status_labels=status_labels, status_counts=status_counts)
 
 @bp.route('/admin/staff/register', methods=['GET', 'POST'])
 @login_required
@@ -185,8 +201,35 @@ def delete_student(student_id):
 def staff_dashboard():
     staff = current_user.staff
     assigned_batches = Batch.query.filter_by(staff_id=staff.id).all()
-    assigned_students = Student.query.join(StudentBatch).join(Batch).filter(Batch.staff_id == staff.id).all()
-    return render_template('staff_dashboard.html', assigned_batches=assigned_batches, assigned_students=assigned_students)
+
+    # Get IDs of batches assigned to the staff
+    assigned_batch_ids = [b.id for b in assigned_batches]
+
+    # Summary card data
+    total_batches = len(assigned_batches)
+    # Count unique students across all assigned batches
+    total_students = db.session.query(func.count(func.distinct(StudentBatch.student_id)))\
+        .filter(StudentBatch.batch_id.in_(assigned_batch_ids)).scalar() or 0
+    # Count unpaid payments for assigned batches
+    unpaid_payments = Payment.query.filter(Payment.batch_id.in_(assigned_batch_ids), Payment.status == 'unpaid').count()
+
+    # Chart Data: Students per Batch
+    batch_student_counts = db.session.query(Batch.name, func.count(StudentBatch.student_id)) \
+        .join(StudentBatch).filter(Batch.staff_id == staff.id).group_by(Batch.name).all()
+    batch_labels = [row[0] for row in batch_student_counts]
+    batch_counts = [row[1] for row in batch_student_counts]
+
+    # Chart Data: Attendance Summary (Present vs Absent)
+    attendance_summary = db.session.query(Attendance.present, func.count(Attendance.id)) \
+        .join(Batch).filter(Batch.staff_id == staff.id).group_by(Attendance.present).all()
+    attendance_labels = ['Present' if row[0] else 'Absent' for row in attendance_summary]
+    attendance_counts = [row[1] for row in attendance_summary]
+
+    return render_template('staff_dashboard.html', 
+                           total_students=total_students, total_batches=total_batches, unpaid_payments=unpaid_payments,
+                           batches=assigned_batches, 
+                           batch_labels=batch_labels, batch_counts=batch_counts,
+                           attendance_labels=attendance_labels, attendance_counts=attendance_counts)
 
 # Batch Routes
 @bp.route('/batch/create', methods=['GET', 'POST'])
@@ -327,15 +370,40 @@ def payment_list():
 # Student Dashboard
 @bp.route('/student/dashboard')
 @login_required
+@role_required(['student'])
 def student_dashboard():
-    if current_user.role != 'student':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('main.dashboard'))
     student = current_user.student
-    attendances = Attendance.query.filter_by(student_id=student.id).all()
+    attendances = Attendance.query.filter_by(student_id=student.id).order_by(Attendance.date.desc()).all()
     payments = Payment.query.filter_by(student_id=student.id).all()
     batches = Batch.query.join(StudentBatch).filter(StudentBatch.student_id == student.id).all()
-    return render_template('student_dashboard.html', student=student, attendances=attendances, payments=payments, batches=batches)
+
+    # Summary card data
+    total_batches = len(batches)
+    unpaid_payments = Payment.query.filter_by(student_id=student.id, status='unpaid').count()
+    
+    # Chart Data: Attendance Over Last 30 Days
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    recent_attendances = Attendance.query.filter(Attendance.student_id == student.id, Attendance.date >= thirty_days_ago) \
+        .order_by(Attendance.date).all()
+    
+    # For summary card
+    recent_attendance = sum(1 for att in recent_attendances if att.present)
+    
+    # For chart
+    attendance_dates = [att.date.strftime('%Y-%m-%d') for att in recent_attendances]
+    attendance_status = [1 if att.present else 0 for att in recent_attendances]  # 1 for present, 0 for absent
+
+    # Chart Data: Payments by Status
+    student_payments_status = db.session.query(Payment.status, func.count(Payment.id)) \
+        .filter(Payment.student_id == student.id).group_by(Payment.status).all()
+    student_status_labels = [row[0] for row in student_payments_status]
+    student_status_counts = [row[1] for row in student_payments_status]
+
+    return render_template('student_dashboard.html', 
+                           student=student, attendances=attendances, payments=payments, batches=batches,
+                           total_batches=total_batches, unpaid_payments=unpaid_payments, recent_attendance=recent_attendance,
+                           attendance_dates=attendance_dates, attendance_status=attendance_status,
+                           student_status_labels=student_status_labels, student_status_counts=student_status_counts)
 
 # Reports Export
 @bp.route('/reports/students')

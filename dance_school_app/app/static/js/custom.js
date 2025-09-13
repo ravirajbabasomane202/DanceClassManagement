@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (studentSelect && batchSelect) {
         studentSelect.addEventListener('change', function () {
             const studentId = this.value;
-            if (studentId) {
+            if (studentId) { // Note: The API endpoint might need adjustment to return batches per student.
                 fetch(`/api/batches`, {
     method: 'GET',
     headers: {
@@ -106,6 +106,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 table.querySelector('tbody').innerHTML = '';
                 rows.forEach(row => table.querySelector('tbody').appendChild(row));
             });
+
+            // Accessibility: Add keyboard support for table sorting
+            header.setAttribute('tabindex', '0');
+            header.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    header.click();
+                }
+            });
         });
     });
 
@@ -119,14 +128,41 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Accessibility: Add keyboard support for table sorting
-    headers.forEach(header => {
-        header.setAttribute('tabindex', '0');
-        header.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                header.click();
-            }
+    // Global Chart Configuration
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.plugins.legend.position = 'top';
+        Chart.defaults.plugins.tooltip.backgroundColor = '#004aad';
+        Chart.defaults.animation.duration = 1000;
+
+        // Add click event for charts (if data-url is set on canvas)
+        document.querySelectorAll('canvas.chart-interactive').forEach(canvas => {
+            canvas.addEventListener('click', function (event) {
+                const chart = Chart.getChart(canvas.id);
+                if (!chart) return;
+                const elements = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                if (elements.length) {
+                    const url = canvas.dataset.url; // Custom data-url attribute
+                    if (url) {
+                        window.location.href = url; // Redirect on click
+                    }
+                }
+            });
         });
-    });
+
+        // Accessibility: Keyboard navigation for charts
+        document.querySelectorAll('canvas').forEach(canvas => {
+            canvas.setAttribute('tabindex', '0');
+            canvas.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    // Simulate click
+                    const simulatedClick = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    canvas.dispatchEvent(simulatedClick);
+                }
+            });
+        });
+    }
 });

@@ -34,6 +34,7 @@ h1, h2, h3, h4, h5, h6 {
     border-top-right-radius: 10px;
 }
 .card-title {
+    color: #004aad;
     margin-bottom: 0;
 }
 .card-body {
@@ -188,4 +189,72 @@ h1, h2, h3, h4, h5, h6 {
 :focus {
     outline: 2px solid #ff6f61;
     outline-offset: 2px;
+}
+
+
+/* ... (keep existing styles) */
+
+/* Chart-Specific Styles */
+.chart-container {
+    position: relative;
+    margin: auto;
+    height: 300px;
+    width: 100%;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    animation: fadeIn 1s ease-in-out;
+    overflow: hidden;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Loading Spinner for Charts */
+.chart-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Enhanced Card Design */
+.card {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s, box-shadow 0.3s;
+    margin-bottom: 1rem;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Dashboard Sections */
+.dashboard-section {
+    margin-bottom: 3rem;
+    padding: 1rem;
+    background-color: #f8f9fa; /* Light background for sections */
+    border-radius: 10px;
+}
+
+/* Interactive Hover Effects */
+.table-hover tbody tr:hover {
+    background-color: rgba(255, 111, 97, 0.1); /* Coral hover */
+    cursor: pointer;
+}
+
+.row > .col-md-6 > .card {
+    height: auto !important; /* Override any h-100 */
 }

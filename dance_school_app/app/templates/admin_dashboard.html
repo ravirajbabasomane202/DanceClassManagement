@@ -18,7 +18,7 @@
     <!-- Summary Cards -->
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mb-5">
         <div class="col">
-            <div class="card text-center h-100">
+            <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">Total Students</h5>
                     <p class="card-text display-4">{{ total_students }}</p>
@@ -27,7 +27,7 @@
             </div>
         </div>
         <div class="col">
-            <div class="card text-center h-100">
+            <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">Active Staff</h5>
                     <p class="card-text display-4">{{ total_staff }}</p>
@@ -36,7 +36,7 @@
             </div>
         </div>
         <div class="col">
-            <div class="card text-center h-100">
+            <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">Total Batches</h5>
                     <p class="card-text display-4">{{ total_batches }}</p>
@@ -45,7 +45,7 @@
             </div>
         </div>
         <div class="col">
-            <div class="card text-center h-100">
+            <div class="card text-center">
                 <div class="card-body">
                     <h5 class="card-title">Unpaid Payments</h5>
                     <p class="card-text display-4">{{ unpaid_payments }}</p>
@@ -55,67 +55,146 @@
         </div>
     </div>
 
+    <!-- Charts Section -->
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Analytics</h2>
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Students by Class Type</h5>
+                        <div class="chart-container">
+                            <canvas id="studentsByClassChart" class="chart-interactive" data-url="{{ url_for('main.student_list') }}" aria-label="Students by Class Type Pie Chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Payments by Status</h5>
+                        <div class="chart-container">
+                            <canvas id="paymentsStatusChart" class="chart-interactive" data-url="{{ url_for('main.payment_list') }}" aria-label="Payments by Status Bar Chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Actions -->
-    <h2 class="mb-3">Quick Actions</h2>
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Manage Students</h5>
-                    <p class="card-text">Register, edit, or deactivate students.</p>
-                    <a href="{{ url_for('main.register_student') }}" class="btn btn-outline-primary">Add Student</a>
-                    <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-secondary">List Students</a>
+    <div class="dashboard-section">
+        <h2 class="mb-3">Quick Actions</h2>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Students</h5>
+                        <p class="card-text">Register, edit, or deactivate students.</p>
+                        <a href="{{ url_for('main.register_student') }}" class="btn btn-primary">Add Student</a>
+                        <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-secondary">List Students</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Manage Staff</h5>
-                    <p class="card-text">Register or view staff members.</p>
-                    <a href="{{ url_for('main.register_staff') }}" class="btn btn-outline-primary">Add Staff</a>
-                    <a href="{{ url_for('main.staff_list') }}" class="btn btn-outline-secondary">List Staff</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Staff</h5>
+                        <p class="card-text">Register or view staff members.</p>
+                        <a href="{{ url_for('main.register_staff') }}" class="btn btn-primary">Add Staff</a>
+                        <a href="{{ url_for('main.staff_list') }}" class="btn btn-outline-secondary">List Staff</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Manage Batches</h5>
-                    <p class="card-text">Create or assign students to batches.</p>
-                    <a href="{{ url_for('main.create_batch') }}" class="btn btn-outline-primary">Create Batch</a>
-                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-secondary">List Batches</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Batches</h5>
+                        <p class="card-text">Create or assign students to batches.</p>
+                        <a href="{{ url_for('main.create_batch') }}" class="btn btn-primary">Create Batch</a>
+                        <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-secondary">List Batches</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Attendance</h5>
-                    <p class="card-text">View or mark attendance for batches.</p>
-                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary">Mark Attendance</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Attendance</h5>
+                        <p class="card-text">View or mark attendance for batches.</p>
+                        <a href="{{ url_for('main.batch_list') }}" class="btn btn-primary">Mark Attendance</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Payments</h5>
-                    <p class="card-text">Update or view payment statuses.</p>
-                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-outline-primary">View Payments</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Payments</h5>
+                        <p class="card-text">Update or view payment statuses.</p>
+                        <a href="{{ url_for('main.payment_list') }}" class="btn btn-primary">View Payments</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Reports</h5>
-                    <p class="card-text">Export student lists or attendance reports.</p>
-                    <a href="{{ url_for('main.export_students') }}" class="btn btn-outline-primary">Export Students</a>
-                    <a href="{{ url_for('main.export_attendance') }}" class="btn btn-outline-secondary">Export Attendance</a>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Reports</h5>
+                        <p class="card-text">Export student lists or attendance reports.</p>
+                        <a href="{{ url_for('main.export_students') }}" class="btn btn-primary">Export Students</a>
+                        <a href="{{ url_for('main.export_attendance') }}" class="btn btn-outline-secondary">Export Attendance</a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Inline Script for Charts -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Students by Class Pie Chart
+    const studentsCtx = document.getElementById('studentsByClassChart').getContext('2d');
+    new Chart(studentsCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ class_labels | tojson }},
+            datasets: [{
+                data: {{ class_counts | tojson }},
+                backgroundColor: ['#ff6f61', '#004aad', '#28a745', '#ffc107'],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true, // Changed to true to prevent resize issues
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { enabled: true }
+            }
+        }
+    });
+
+    // Payments Status Bar Chart
+    const paymentsCtx = document.getElementById('paymentsStatusChart').getContext('2d');
+    new Chart(paymentsCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ status_labels | map('title') | list | tojson }},
+            datasets: [{
+                label: 'Count',
+                data: {{ status_counts | tojson }},
+                backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true, // Changed to true
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { stepSize: 1 } 
+                } 
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

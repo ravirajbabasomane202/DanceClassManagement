@@ -416,9 +416,10 @@ from flask_login import login_user, logout_user, current_user, login_required
 from app import db
 from app.models import User, Student, Staff, Batch, Attendance, Payment, StudentBatch
 from app.forms import LoginForm, StudentRegistrationForm, StaffRegistrationForm, AttendanceForm, PaymentForm , BatchForm, AssignStudentForm, PublicStudentRegistrationForm
+from sqlalchemy import func
 from io import BytesIO
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import Blueprint
 import os
 
@@ -480,11 +481,26 @@ def admin_dashboard():
     total_staff = Staff.query.count()
     total_batches = Batch.query.count()
     unpaid_payments = Payment.query.filter_by(status='unpaid').count()
+
+    # Chart Data: Students by Class Type
+    students_by_class = db.session.query(Student.class_type, func.count(Student.id)) \
+        .group_by(Student.class_type).all()
+    class_labels = [row[0] for row in students_by_class]
+    class_counts = [row[1] for row in students_by_class]
+
+    # Chart Data: Payments by Status
+    payments_status = db.session.query(Payment.status, func.count(Payment.id)) \
+        .group_by(Payment.status).all()
+    status_labels = [row[0] for row in payments_status]
+    status_counts = [row[1] for row in payments_status]
+
     return render_template('admin_dashboard.html', 
                          total_students=total_students, 
                          total_staff=total_staff, 
                          total_batches=total_batches, 
-                         unpaid_payments=unpaid_payments)
+                         unpaid_payments=unpaid_payments,
+                         class_labels=class_labels, class_counts=class_counts,
+                         status_labels=status_labels, status_counts=status_counts)
 
 @bp.route('/admin/staff/register', methods=['GET', 'POST'])
 @login_required
@@ -598,8 +614,35 @@ def delete_student(student_id):
 def staff_dashboard():
     staff = current_user.staff
     assigned_batches = Batch.query.filter_by(staff_id=staff.id).all()
-    assigned_students = Student.query.join(StudentBatch).join(Batch).filter(Batch.staff_id == staff.id).all()
-    return render_template('staff_dashboard.html', assigned_batches=assigned_batches, assigned_students=assigned_students)
+
+    # Get IDs of batches assigned to the staff
+    assigned_batch_ids = [b.id for b in assigned_batches]
+
+    # Summary card data
+    total_batches = len(assigned_batches)
+    # Count unique students across all assigned batches
+    total_students = db.session.query(func.count(func.distinct(StudentBatch.student_id)))\
+        .filter(StudentBatch.batch_id.in_(assigned_batch_ids)).scalar() or 0
+    # Count unpaid payments for assigned batches
+    unpaid_payments = Payment.query.filter(Payment.batch_id.in_(assigned_batch_ids), Payment.status == 'unpaid').count()
+
+    # Chart Data: Students per Batch
+    batch_student_counts = db.session.query(Batch.name, func.count(StudentBatch.student_id)) \
+        .join(StudentBatch).filter(Batch.staff_id == staff.id).group_by(Batch.name).all()
+    batch_labels = [row[0] for row in batch_student_counts]
+    batch_counts = [row[1] for row in batch_student_counts]
+
+    # Chart Data: Attendance Summary (Present vs Absent)
+    attendance_summary = db.session.query(Attendance.present, func.count(Attendance.id)) \
+        .join(Batch).filter(Batch.staff_id == staff.id).group_by(Attendance.present).all()
+    attendance_labels = ['Present' if row[0] else 'Absent' for row in attendance_summary]
+    attendance_counts = [row[1] for row in attendance_summary]
+
+    return render_template('staff_dashboard.html', 
+                           total_students=total_students, total_batches=total_batches, unpaid_payments=unpaid_payments,
+                           batches=assigned_batches, 
+                           batch_labels=batch_labels, batch_counts=batch_counts,
+                           attendance_labels=attendance_labels, attendance_counts=attendance_counts)
 
 # Batch Routes
 @bp.route('/batch/create', methods=['GET', 'POST'])
@@ -740,15 +783,40 @@ def payment_list():
 # Student Dashboard
 @bp.route('/student/dashboard')
 @login_required
+@role_required(['student'])
 def student_dashboard():
-    if current_user.role != 'student':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('main.dashboard'))
     student = current_user.student
-    attendances = Attendance.query.filter_by(student_id=student.id).all()
+    attendances = Attendance.query.filter_by(student_id=student.id).order_by(Attendance.date.desc()).all()
     payments = Payment.query.filter_by(student_id=student.id).all()
     batches = Batch.query.join(StudentBatch).filter(StudentBatch.student_id == student.id).all()
-    return render_template('student_dashboard.html', student=student, attendances=attendances, payments=payments, batches=batches)
+
+    # Summary card data
+    total_batches = len(batches)
+    unpaid_payments = Payment.query.filter_by(student_id=student.id, status='unpaid').count()
+    
+    # Chart Data: Attendance Over Last 30 Days
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    recent_attendances = Attendance.query.filter(Attendance.student_id == student.id, Attendance.date >= thirty_days_ago) \
+        .order_by(Attendance.date).all()
+    
+    # For summary card
+    recent_attendance = sum(1 for att in recent_attendances if att.present)
+    
+    # For chart
+    attendance_dates = [att.date.strftime('%Y-%m-%d') for att in recent_attendances]
+    attendance_status = [1 if att.present else 0 for att in recent_attendances]  # 1 for present, 0 for absent
+
+    # Chart Data: Payments by Status
+    student_payments_status = db.session.query(Payment.status, func.count(Payment.id)) \
+        .filter(Payment.student_id == student.id).group_by(Payment.status).all()
+    student_status_labels = [row[0] for row in student_payments_status]
+    student_status_counts = [row[1] for row in student_payments_status]
+
+    return render_template('student_dashboard.html', 
+                           student=student, attendances=attendances, payments=payments, batches=batches,
+                           total_batches=total_batches, unpaid_payments=unpaid_payments, recent_attendance=recent_attendance,
+                           attendance_dates=attendance_dates, attendance_status=attendance_status,
+                           student_status_labels=student_status_labels, student_status_counts=student_status_counts)
 
 # Reports Export
 @bp.route('/reports/students')
@@ -1103,6 +1171,65 @@ h1, h2, h3, h4, h5, h6 {
     outline: 2px solid #ff6f61;
     outline-offset: 2px;
 }
+
+
+/* ... (keep existing styles) */
+
+/* Chart-Specific Styles */
+.chart-container {
+    position: relative;
+    margin: auto;
+    height: 300px;
+    width: 100%;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Loading Spinner for Charts */
+.chart-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Enhanced Card Design */
+.card {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Dashboard Sections */
+.dashboard-section {
+    margin-bottom: 3rem;
+}
+
+/* Interactive Hover Effects */
+.table-hover tbody tr:hover {
+    background-color: rgba(255, 111, 97, 0.1); /* Coral hover */
+    cursor: pointer;
+}
 ==================================================
 
 File: .\app\static\js\custom.js
@@ -1142,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (studentSelect && batchSelect) {
         studentSelect.addEventListener('change', function () {
             const studentId = this.value;
-            if (studentId) {
+            if (studentId) { // Note: The API endpoint might need adjustment to return batches per student.
                 fetch(`/api/batches`, {
     method: 'GET',
     headers: {
@@ -1214,6 +1341,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 table.querySelector('tbody').innerHTML = '';
                 rows.forEach(row => table.querySelector('tbody').appendChild(row));
             });
+
+            // Accessibility: Add keyboard support for table sorting
+            header.setAttribute('tabindex', '0');
+            header.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    header.click();
+                }
+            });
         });
     });
 
@@ -1227,16 +1363,43 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Accessibility: Add keyboard support for table sorting
-    headers.forEach(header => {
-        header.setAttribute('tabindex', '0');
-        header.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                header.click();
-            }
+    // Global Chart Configuration
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.plugins.legend.position = 'top';
+        Chart.defaults.plugins.tooltip.backgroundColor = '#004aad';
+        Chart.defaults.animation.duration = 1000;
+
+        // Add click event for charts (if data-url is set on canvas)
+        document.querySelectorAll('canvas.chart-interactive').forEach(canvas => {
+            canvas.addEventListener('click', function (event) {
+                const chart = Chart.getChart(canvas.id);
+                if (!chart) return;
+                const elements = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                if (elements.length) {
+                    const url = canvas.dataset.url; // Custom data-url attribute
+                    if (url) {
+                        window.location.href = url; // Redirect on click
+                    }
+                }
+            });
         });
-    });
+
+        // Accessibility: Keyboard navigation for charts
+        document.querySelectorAll('canvas').forEach(canvas => {
+            canvas.setAttribute('tabindex', '0');
+            canvas.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    // Simulate click
+                    const simulatedClick = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    canvas.dispatchEvent(simulatedClick);
+                }
+            });
+        });
+    }
 });
 ==================================================
 
@@ -1293,6 +1456,29 @@ File: .\app\templates\admin_dashboard.html
                     <h5 class="card-title">Unpaid Payments</h5>
                     <p class="card-text display-4">{{ unpaid_payments }}</p>
                     <a href="{{ url_for('main.payment_list') }}" class="btn btn-primary">View Payments</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Analytics</h2>
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Students by Class Type</h5>
+                        <canvas id="studentsByClassChart" class="chart-interactive" data-url="{{ url_for('main.student_list') }}" aria-label="Students by Class Type Pie Chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Payments by Status</h5>
+                        <canvas id="paymentsStatusChart" class="chart-interactive" data-url="{{ url_for('main.payment_list') }}" aria-label="Payments by Status Bar Chart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1361,6 +1547,51 @@ File: .\app\templates\admin_dashboard.html
         </div>
     </div>
 </div>
+
+<!-- Inline Script for Charts -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Students by Class Pie Chart
+    const studentsCtx = document.getElementById('studentsByClassChart').getContext('2d');
+    new Chart(studentsCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ class_labels | tojson }},
+            datasets: [{
+                data: {{ class_counts | tojson }},
+                backgroundColor: ['#ff6f61', '#004aad', '#28a745', '#ffc107'],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { enabled: true }
+            }
+        }
+    });
+
+    // Payments Status Bar Chart
+    const paymentsCtx = document.getElementById('paymentsStatusChart').getContext('2d');
+    new Chart(paymentsCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ status_labels | map('title') | list | tojson }},
+            datasets: [{
+                label: 'Count',
+                data: {{ status_counts | tojson }},
+                backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+});
+</script>
 {% endblock %}
 ==================================================
 
@@ -1473,6 +1704,7 @@ File: .\app\templates\base.html
     <title>Dance School Management</title>
     {{ bootstrap.load_css() }}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -1492,61 +1724,58 @@ File: .\app\templates\base.html
                     </li>
                     {% endif %}
 
-
                     {% if current_user.is_authenticated %}
-                    {% if current_user.role == 'admin' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.student_list') }}">Students</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.staff_list') }}">Staff</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.batch_list') }}">Batches</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.payment_list') }}">Payments</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                            Reports
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
-                            <li><a class="dropdown-item" href="{{ url_for('main.export_students') }}">Export
-                                    Students</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.export_attendance') }}">Export
-                                    Attendance</a></li>
-                        </ul>
-                    </li>
-                    {% elif current_user.role == 'staff' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.staff_dashboard') }}">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.student_list') }}">Students</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.batch_list') }}">Batches</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.payment_list') }}">Payments</a>
-                    </li>
-                    {% elif current_user.role == 'student' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.student_dashboard') }}">Dashboard</a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.logout') }}">Logout</a>
-                    </li>
+                        {% if current_user.role == 'admin' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.student_list') }}">Students</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.staff_list') }}">Staff</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.batch_list') }}">Batches</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.payment_list') }}">Payments</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                Reports
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('main.export_students') }}">Export Students</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.export_attendance') }}">Export Attendance</a></li>
+                            </ul>
+                        </li>
+                        {% elif current_user.role == 'staff' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.staff_dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.student_list') }}">Students</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.batch_list') }}">Batches</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.payment_list') }}">Payments</a>
+                        </li>
+                        {% elif current_user.role == 'student' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.student_dashboard') }}">Dashboard</a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.logout') }}">Logout</a>
+                        </li>
                     {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
-                    </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
+                        </li>
                     {% endif %}
                 </ul>
             </div>
@@ -1554,23 +1783,22 @@ File: .\app\templates\base.html
     </nav>
 
     <!-- Main Content -->
-    <div class="container mt-4">
+    <main role="main" class="container mt-4">
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
         {% endif %}
         {% endwith %}
 
-        <!-- Content Block -->
-        {% block content %}
-        {% endblock %}
-    </div>
+        <!-- Page Content Block -->
+        {% block content %}{% endblock %}
+    </main>
 
     <!-- Bootstrap JS and Custom Scripts -->
     {{ bootstrap.load_js() }}
@@ -1578,6 +1806,7 @@ File: .\app\templates\base.html
 </body>
 
 </html>
+
 ==================================================
 
 File: .\app\templates\batch_list.html
@@ -2667,6 +2896,29 @@ File: .\app\templates\staff_dashboard.html
         </div>
     </div>
 
+    <!-- Charts Section -->
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Analytics</h2>
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Students per Batch</h5>
+                        <canvas id="studentsPerBatchChart" class="chart-interactive" data-url="{{ url_for('main.batch_list') }}" aria-label="Students per Batch Bar Chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Attendance Summary</h5>
+                        <canvas id="attendanceSummaryChart" class="chart-interactive" data-url="{{ url_for('main.batch_list') }}" aria-label="Attendance Summary Doughnut Chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Actions -->
     <h2 class="mb-3">Quick Actions</h2>
     <div class="card">
@@ -2706,7 +2958,7 @@ File: .\app\templates\staff_dashboard.html
                         <tr>
                             <td>{{ batch.name }}</td>
                             <td>${{ "%.2f" % batch.fee_monthly }}</td>
-                            <td>{{ batch.students.count() }}</td>
+                            <td>{{ batch.students|length }}</td>
                             <td>
                                 <a href="{{ url_for('main.mark_attendance', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">Mark Attendance</a>
                             </td>
@@ -2719,6 +2971,47 @@ File: .\app\templates\staff_dashboard.html
         <p class="text-muted">No batches assigned.</p>
     {% endif %}
 </div>
+
+<!-- Inline Script for Charts -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Students per Batch Bar Chart
+    const batchCtx = document.getElementById('studentsPerBatchChart').getContext('2d');
+    new Chart(batchCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ batch_labels | tojson }},
+            datasets: [{
+                label: 'Student Count',
+                data: {{ batch_counts | tojson }},
+                backgroundColor: '#004aad',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Attendance Summary Doughnut Chart
+    const attendanceCtx = document.getElementById('attendanceSummaryChart').getContext('2d');
+    new Chart(attendanceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ attendance_labels | tojson }},
+            datasets: [{
+                data: {{ attendance_counts | tojson }},
+                backgroundColor: ['#28a745', '#dc3545'], // Matches Present, Absent
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+        }
+    });
+});
+</script>
 {% endblock %}
 ==================================================
 
@@ -2823,6 +3116,29 @@ File: .\app\templates\student_dashboard.html
         </div>
     </div>
 
+    <!-- Charts Section -->
+    <div class="dashboard-section mb-5">
+        <h2 class="mb-3">Your Analytics</h2>
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Attendance (Last 30 Days)</h5>
+                        <canvas id="attendanceTrendChart" class="chart-interactive" data-url="{{ url_for('main.student_dashboard') }}" aria-label="Attendance Trend Line Chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Your Payment Status</h5>
+                        <canvas id="studentPaymentsChart" class="chart-interactive" data-url="{{ url_for('main.student_dashboard') }}" aria-label="Payments by Status Pie Chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Enrolled Batches -->
     <h2 class="mb-3">Your Enrolled Batches</h2>
     {% if batches %}
@@ -2921,6 +3237,75 @@ File: .\app\templates\student_dashboard.html
         <p class="text-muted">No payment records found.</p>
     {% endif %}
 </div>
+
+<!-- Inline Script for Charts -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Attendance Trend Line Chart
+    if (document.getElementById('attendanceTrendChart')) {
+        const attendanceCtx = document.getElementById('attendanceTrendChart').getContext('2d');
+        new Chart(attendanceCtx, {
+            type: 'line',
+            data: {
+                labels: {{ attendance_dates | tojson }},
+                datasets: [{
+                    label: 'Attendance Trend',
+                    data: {{ attendance_status | tojson }},
+                    borderColor: '#ff6f61', // From your request
+                    fill: false, // From your request
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1,
+                        ticks: {
+                            stepSize: 1,
+                            // This callback makes the Y-axis more readable
+                            callback: function(value) {
+                                return value === 1 ? 'Present' : 'Absent';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Student Payment Status Pie Chart
+    if (document.getElementById('studentPaymentsChart')) {
+        const paymentCtx = document.getElementById('studentPaymentsChart').getContext('2d');
+        const paymentLabels = {{ student_status_labels | map('title') | list | tojson }};
+        const paymentData = {{ student_status_counts | tojson }};
+        // Using a color map is more robust than a fixed-order array,
+        // ensuring colors always match the correct status.
+        const colorMap = {
+            'Paid': '#28a745',
+            'Unpaid': '#dc3545',
+            'Partial': '#ffc107'
+        };
+        const backgroundColors = paymentLabels.map(label => colorMap[label] || '#6c757d');
+
+        new Chart(paymentCtx, {
+            type: 'pie',
+            data: {
+                labels: paymentLabels,
+                datasets: [{
+                    data: paymentData,
+                    backgroundColor: backgroundColors,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
 ==================================================
 
