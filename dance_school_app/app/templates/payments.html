@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Manage Payments</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Add/Update Payment Form -->
+    <div class="card mb-5">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Add New Payment</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('main.payment_list') }}">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.student_id.label(class="form-label") }}
+                            {{ form.student_id(class="form-control") }}
+                            {% if form.student_id.errors %}
+                                {% for error in form.student_id.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.batch_id.label(class="form-label") }}
+                            {{ form.batch_id(class="form-control") }}
+                            {% if form.batch_id.errors %}
+                                {% for error in form.batch_id.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.amount.label(class="form-label") }}
+                            {{ form.amount(class="form-control", placeholder="Enter amount") }}
+                            {% if form.amount.errors %}
+                                {% for error in form.amount.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.due_date.label(class="form-label") }}
+                            {{ form.due_date(class="form-control") }}
+                            {% if form.due_date.errors %}
+                                {% for error in form.due_date.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-control") }}
+                            {% if form.status.errors %}
+                                {% for error in form.status.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Payments Table -->
+    <h2 class="mb-3">Payment Records</h2>
+    {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Batch</th>
+                        <th>Amount</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.student.full_name }}</td>
+                            <td>{{ payment.batch.name }}</td>
+                            <td>${{ "%.2f" % payment.amount }}</td>
+                            <td>{{ payment.due_date|datetimeformat('YYYY-MM-DD') }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if payment.status == 'paid' %}bg-success
+                                    {% elif payment.status == 'unpaid' %}bg-danger
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ payment.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main.update_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No payment records found.</p>
+    {% endif %}
+</div>
+{% endblock %}

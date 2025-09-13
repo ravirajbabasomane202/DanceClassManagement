@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Batches</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if current_user.role == 'admin' %}
+        <div class="mb-3">
+            <a href="{{ url_for('main.create_batch') }}" class="btn btn-primary">Create New Batch</a>
+        </div>
+    {% endif %}
+
+    {% if batches %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Batch Name</th>
+                        <th>Instructor</th>
+                        <th>Monthly Fee</th>
+                        <th>Quarterly Fee</th>
+                        <th>Student Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batches %}
+                        <tr>
+                            <td>{{ batch.name }}</td>
+                            <td>{{ batch.staff.name }}</td>
+                            <td>${{ "%.2f" % batch.fee_monthly }}</td>
+                            <td>${{ "%.2f" % batch.fee_quarterly if batch.fee_quarterly else 'N/A' }}</td>
+                            <td>{{ batch.students|length }}</td>
+                            <td>
+                                <a href="{{ url_for('main.assign_student_to_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">Assign Student</a>
+                                <a href="{{ url_for('main.mark_attendance', batch_id=batch.id) }}" class="btn btn-sm btn-outline-secondary">Attendance</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No batches found.</p>
+    {% endif %}
+</div>
+{% endblock %}

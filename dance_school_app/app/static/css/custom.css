@@ -1,0 +1,191 @@
+/* General Styling */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Arial', sans-serif;
+    color: #333;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color: #004aad; /* Deep blue for dance school theme */
+    font-weight: 600;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+.card-header {
+    background-color: #ff6f61; /* Coral accent */
+    color: white;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+.card-title {
+    margin-bottom: 0;
+}
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Tables */
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+.table th {
+    background-color: #004aad;
+    color: white;
+    font-weight: 500;
+}
+.table td {
+    vertical-align: middle;
+}
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 74, 173, 0.05);
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 74, 173, 0.1);
+}
+
+/* Forms */
+.form-group label {
+    font-weight: 600;
+    color: #004aad;
+}
+.form-control {
+    border-radius: 5px;
+    border: 1px solid #ced4da;
+    transition: border-color 0.3s;
+}
+.form-control:focus {
+    border-color: #ff6f61;
+    box-shadow: 0 0 5px rgba(255, 111, 97, 0.5);
+}
+.text-danger {
+    font-size: 0.85em;
+    margin-top: 0.25rem;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: #004aad;
+    border-color: #004aad;
+    border-radius: 5px;
+    padding: 0.5rem 1.5rem;
+}
+.btn-primary:hover {
+    background-color: #003580;
+    border-color: #003580;
+}
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    border-radius: 5px;
+}
+.btn-outline-primary {
+    border-color: #004aad;
+    color: #004aad;
+}
+.btn-outline-primary:hover {
+    background-color: #004aad;
+    color: white;
+}
+.btn-sm {
+    font-size: 0.85rem;
+}
+
+/* Badges */
+.badge {
+    font-size: 0.9em;
+    padding: 0.5em 0.75em;
+    border-radius: 5px;
+}
+.badge.bg-success {
+    background-color: #28a745;
+}
+.badge.bg-danger {
+    background-color: #dc3545;
+}
+.badge.bg-warning {
+    background-color: #ffc107;
+}
+
+/* Flash Messages */
+.alert {
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+}
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+/* Dashboard Cards */
+.card .display-4 {
+    font-size: 2.5rem;
+    color: #ff6f61;
+}
+.card:nth-child(1) {
+    border-left: 5px solid #28a745;
+}
+.card:nth-child(2) {
+    border-left: 5px solid #004aad;
+}
+.card:nth-child(3) {
+    border-left: 5px solid #dc3545;
+}
+
+/* Navbar */
+.navbar {
+    background-color: #004aad;
+}
+.navbar-brand, .nav-link {
+    color: white !important;
+}
+.nav-link:hover {
+    color: #ff6f61 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table {
+        font-size: 0.9rem;
+    }
+    .btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.9rem;
+    }
+    .display-4 {
+        font-size: 2rem;
+    }
+}
+
+/* Accessibility */
+:focus {
+    outline: 2px solid #ff6f61;
+    outline-offset: 2px;
+}

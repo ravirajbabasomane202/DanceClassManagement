@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Staff Dashboard</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Summary Cards -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Students</h5>
+                    <p class="card-text display-4">{{ total_students }}</p>
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-primary">View Students</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Assigned Batches</h5>
+                    <p class="card-text display-4">{{ total_batches }}</p>
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-primary">View Batches</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Unpaid Payments</h5>
+                    <p class="card-text display-4">{{ unpaid_payments }}</p>
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-primary">View Payments</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h2 class="mb-3">Quick Actions</h2>
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-primary w-100">Manage Students</a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary w-100">Manage Batches</a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-outline-primary w-100">Manage Payments</a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary w-100">Mark Attendance</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assigned Batches -->
+    <h2 class="mt-5 mb-3">Your Assigned Batches</h2>
+    {% if batches %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Batch Name</th>
+                        <th>Fee (Monthly)</th>
+                        <th>Student Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batches %}
+                        <tr>
+                            <td>{{ batch.name }}</td>
+                            <td>${{ "%.2f" % batch.fee_monthly }}</td>
+                            <td>{{ batch.students.count() }}</td>
+                            <td>
+                                <a href="{{ url_for('main.mark_attendance', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">Mark Attendance</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No batches assigned.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Admin Dashboard</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Summary Cards -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mb-5">
+        <div class="col">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Students</h5>
+                    <p class="card-text display-4">{{ total_students }}</p>
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-primary">View Students</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Active Staff</h5>
+                    <p class="card-text display-4">{{ total_staff }}</p>
+                    <a href="{{ url_for('main.staff_list') }}" class="btn btn-primary">View Staff</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Batches</h5>
+                    <p class="card-text display-4">{{ total_batches }}</p>
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-primary">View Batches</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Unpaid Payments</h5>
+                    <p class="card-text display-4">{{ unpaid_payments }}</p>
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-primary">View Payments</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h2 class="mb-3">Quick Actions</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Students</h5>
+                    <p class="card-text">Register, edit, or deactivate students.</p>
+                    <a href="{{ url_for('main.register_student') }}" class="btn btn-outline-primary">Add Student</a>
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-secondary">List Students</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Staff</h5>
+                    <p class="card-text">Register or view staff members.</p>
+                    <a href="{{ url_for('main.register_staff') }}" class="btn btn-outline-primary">Add Staff</a>
+                    <a href="{{ url_for('main.staff_list') }}" class="btn btn-outline-secondary">List Staff</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Batches</h5>
+                    <p class="card-text">Create or assign students to batches.</p>
+                    <a href="{{ url_for('main.create_batch') }}" class="btn btn-outline-primary">Create Batch</a>
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-secondary">List Batches</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Attendance</h5>
+                    <p class="card-text">View or mark attendance for batches.</p>
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary">Mark Attendance</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Payments</h5>
+                    <p class="card-text">Update or view payment statuses.</p>
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-outline-primary">View Payments</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Reports</h5>
+                    <p class="card-text">Export student lists or attendance reports.</p>
+                    <a href="{{ url_for('main.export_students') }}" class="btn btn-outline-primary">Export Students</a>
+                    <a href="{{ url_for('main.export_attendance') }}" class="btn btn-outline-secondary">Export Attendance</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

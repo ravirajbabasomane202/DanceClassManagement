@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Reports</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Report Options -->
+    <div class="card mb-5">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Available Reports</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <h6>Student List</h6>
+                    <p>View all registered students with their details.</p>
+                    <a href="{{ url_for('main.export_students') }}" class="btn btn-primary">Export as CSV</a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <h6>Attendance Summary</h6>
+                    <p>View attendance records for all students.</p>
+                    <a href="{{ url_for('main.export_attendance') }}" class="btn btn-primary">Export as CSV</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student List Report -->
+    <h2 class="mb-3">Student List</h2>
+    {% if students %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Age</th>
+                        <th>Class Type</th>
+                        <th>Email</th>
+                        <th>Contact Number</th>
+                        <th>Registration Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ student.full_name }}</td>
+                            <td>{{ student.age }}</td>
+                            <td>{{ student.class_type }}</td>
+                            <td>{{ student.user.email }}</td>
+                            <td>{{ student.contact_number or 'N/A' }}</td>
+                            <td>{{ student.registration_date|datetimeformat('YYYY-MM-DD') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No students found.</p>
+    {% endif %}
+
+    <!-- Attendance Summary Report -->
+    <h2 class="mb-3">Attendance Summary</h2>
+    {% if attendances %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Batch</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in attendances %}
+                        <tr>
+                            <td>{{ attendance.student.full_name }}</td>
+                            <td>{{ attendance.batch.name }}</td>
+                            <td>{{ attendance.date|datetimeformat('YYYY-MM-DD') }}</td>
+                            <td>
+                                <span class="badge {% if attendance.present %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ 'Present' if attendance.present else 'Absent' }}
+                                </span>
+                            </td>
+                            <td>{{ attendance.notes or 'N/A' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No attendance records found.</p>
+    {% endif %}
+</div>
+{% endblock %}

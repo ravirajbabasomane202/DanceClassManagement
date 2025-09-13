@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    	<h1 class="mb-4">Register Student</h1>
+
+	<!-- Flash Messages -->
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+					{{ message }}
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+
+	<!-- Register Student Form -->
+	<div class="card">
+		<div class="card-body">
+			<form method="POST" action="{{ url_for('main.register_student') }}">
+				{{ form.hidden_tag() }}
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.full_name.label(class="form-label") }}
+							{{ form.full_name(class="form-control", placeholder="Enter full name") }}
+							{% if form.full_name.errors %}
+								{% for error in form.full_name.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.age.label(class="form-label") }}
+							{{ form.age(class="form-control", placeholder="Enter age") }}
+							{% if form.age.errors %}
+								{% for error in form.age.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.email.label(class="form-label") }}
+							{{ form.email(class="form-control", placeholder="Enter email") }}
+							{% if form.email.errors %}
+								{% for error in form.email.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.contact_number.label(class="form-label") }}
+							{{ form.contact_number(class="form-control", placeholder="Enter contact number") }}
+							{% if form.contact_number.errors %}
+								{% for error in form.contact_number.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.address.label(class="form-label") }}
+							{{ form.address(class="form-control", placeholder="Enter address") }}
+							{% if form.address.errors %}
+								{% for error in form.address.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.guardian_name.label(class="form-label") }}
+							{{ form.guardian_name(class="form-control", placeholder="Enter guardian name (if minor)") }}
+							{% if form.guardian_name.errors %}
+								{% for error in form.guardian_name.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.emergency_contact.label(class="form-label") }}
+							{{ form.emergency_contact(class="form-control", placeholder="Enter emergency contact") }}
+							{% if form.emergency_contact.errors %}
+								{% for error in form.emergency_contact.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.class_type.label(class="form-label") }}
+							{{ form.class_type(class="form-control") }}
+							{% if form.class_type.errors %}
+								{% for error in form.class_type.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+				</div>
+				<div class="mt-4">
+					{{ form.submit(class="btn btn-primary") }}
+					<a href="{{ url_for('main.student_list') }}" class="btn btn-secondary">Cancel</a>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}

@@ -1,0 +1,3341 @@
+File: .\copy_files_by_ext.py
+import os
+
+# Root folder where you want to search
+root_dir = "."
+
+# Output file
+output_file = "all_files_combined.txt"
+
+# File extensions to include
+extensions = {".py", ".js", ".css", ".html"}
+
+with open(output_file, "w", encoding="utf-8") as outfile:
+    for folder, _, files in os.walk(root_dir):
+        for file in files:
+            if any(file.endswith(ext) for ext in extensions):
+                file_path = os.path.join(folder, file)
+                try:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as infile:
+                        outfile.write(f"File: {file_path}\n")
+                        outfile.write(infile.read())
+                        outfile.write("\n" + "="*50 + "\n\n")
+                except Exception as e:
+                    print(f"Error reading {file_path}: {e}")
+
+print(f"✅ All files combined into {output_file}")
+
+==================================================
+
+File: .\create_test_data.py
+from app import create_app, db
+from app.models import User, Staff, Student
+
+# This creates an application context without running the server
+app = create_app()
+
+def add_users():
+    """Adds test admin, staff, and student users to the database."""
+    with app.app_context():
+        print("Creating an admin user...")
+        # Check if admin user already exists to avoid duplicates
+        if User.query.filter_by(username='admin').first():
+            print("Admin user already exists. Skipping...")
+        else:
+            admin_user = User(username='admin', email='admin@danceschool.com', role='admin')
+            admin_user.set_password('password')  # Set a secure password for the admin
+            db.session.add(admin_user)
+            db.session.commit()
+            print("✅ Admin user created successfully.")
+
+        print("\nCreating a staff user...")
+        # Check if staff user already exists
+        if User.query.filter_by(username='staff_user').first():
+            print("Staff user already exists. Skipping...")
+        else:
+            staff_user = User(username='staff_user', email='staff@danceschool.com', role='staff')
+            staff_user.set_password('password')  # Set a secure password
+            db.session.add(staff_user)
+            db.session.commit()
+            # Link the new User to a Staff record
+            staff = Staff(user_id=staff_user.id, name='Test Staff', phone='1234567890', specialization='Hip-Hop')
+            db.session.add(staff)
+            db.session.commit()
+            print("✅ Staff user and linked Staff record created successfully.")
+
+        print("\nCreating a student user...")
+        # Check if student user already exists
+        if User.query.filter_by(username='student_user').first():
+            print("Student user already exists. Skipping...")
+        else:
+            student_user = User(username='student_user', email='student@danceschool.com', role='student')
+            student_user.set_password('password')  # Set a secure password
+            db.session.add(student_user)
+            db.session.commit()
+            # Link the new User to a Student record
+            student = Student(user_id=student_user.id, full_name='Test Student', age=18, class_type='Salsa')
+            db.session.add(student)
+            db.session.commit()
+            print("✅ Student user and linked Student record created successfully.")
+
+if __name__ == '__main__':
+    add_users()
+==================================================
+
+File: .\run.py
+from app import create_app
+
+app = create_app()
+
+if __name__ == '__main__':
+    app.run(debug=True)
+==================================================
+
+File: .\app\config.py
+import os
+from datetime import timedelta
+
+class Config:
+    """Base configuration for the Flask dance school management application."""
+    
+    # Flask core settings
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-please-change-this-in-production'
+    DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+
+    # Flask-SQLAlchemy settings
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'dance_school.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = False  # Set to True for SQL query logging in development
+
+    # Flask-Login settings
+    SESSION_COOKIE_SECURE = True  # Use HTTPS in production
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)  # Session timeout after 30 minutes
+
+    # Flask-WTF settings (CSRF enabled by default)
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 3600  # CSRF token valid for 1 hour
+
+    # Flask-Bootstrap settings
+    BOOTSTRAP_SERVE_LOCAL = True  # Serve Bootstrap files locally for offline development
+
+    # Optional: Flask-Mail settings (for future email reminders)
+    # MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.example.com')
+    # MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    # MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+    # MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    # MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    # MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'no-reply@danceschool.com')
+
+    # Optional: File upload settings (for profile pictures, if implemented)
+    # UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
+    # MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # Limit uploads to 16MB
+
+class DevelopmentConfig(Config):
+    """Development-specific configuration."""
+    DEBUG = True
+    SQLALCHEMY_ECHO = True  # Log SQL queries for debugging
+
+class ProductionConfig(Config):
+    """Production-specific configuration."""
+    DEBUG = False
+    SESSION_COOKIE_SECURE = True  # Enforce HTTPS
+    SQLALCHEMY_ECHO = False
+
+    # Ensure SECRET_KEY and DATABASE_URL are set in environment
+    SECRET_KEY = os.environ.get('SECRET_KEY')  # No fallback in production
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://user:password@localhost/dance_school'
+
+# Map configurations to environment
+config_by_name = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig
+}
+==================================================
+
+File: .\app\forms.py
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField, IntegerField, SelectField, BooleanField, DateField, FloatField, TextAreaField
+from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
+from app.models import Staff, Student, Batch, StudentBatch
+from datetime import datetime
+
+class LoginForm(FlaskForm):
+    """Form for user login (admin, staff, student)."""
+    username = StringField('Username', validators=[DataRequired(message="Username is required.")])
+    password = PasswordField('Password', validators=[DataRequired(message="Password is required.")])
+    submit = SubmitField('Login')
+
+class StudentRegistrationForm(FlaskForm):
+    """Form for registering a new student (by admin or staff)."""
+    full_name = StringField('Full Name', validators=[DataRequired(message="Full name is required.")])
+    age = IntegerField('Age', validators=[DataRequired(message="Age is required.")])
+    contact_number = StringField('Contact Number', validators=[Optional()])
+    address = StringField('Address', validators=[Optional()])
+    guardian_name = StringField('Guardian Name (if minor)', validators=[Optional()])
+    email = StringField('Email', validators=[DataRequired(message="Email is required."), Email()])
+    emergency_contact = StringField('Emergency Contact', validators=[Optional()])
+    class_type = SelectField('Class Type', choices=[
+        ('Hip-Hop', 'Hip-Hop'),
+        ('Salsa', 'Salsa'),
+        ('Classical', 'Classical')
+    ], validators=[DataRequired(message="Please select a class type.")])
+    submit = SubmitField('Register Student')
+
+class StaffRegistrationForm(FlaskForm):
+    """Form for registering a new staff member (by admin only)."""
+    name = StringField('Name', validators=[DataRequired(message="Name is required.")])
+    email = StringField('Email', validators=[DataRequired(message="Email is required."), Email()])
+    phone = StringField('Phone', validators=[Optional()])
+    specialization = StringField('Specialization', validators=[Optional()])
+    salary = FloatField('Salary', validators=[Optional()])
+    username = StringField('Username', validators=[DataRequired(message="Username is required."), Length(min=4, max=64)])
+    password = PasswordField('Password', validators=[
+        DataRequired(message="Password is required."),
+        Length(min=6, message="Password must be at least 6 characters.")
+    ])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        DataRequired(message="Please confirm the password."),
+        EqualTo('password', message="Passwords must match.")
+    ])
+    submit = SubmitField('Register Staff')
+
+class BatchForm(FlaskForm):
+    """Form for creating a new batch (by admin only)."""
+    name = StringField('Batch Name', validators=[DataRequired(message="Batch name is required.")])
+    staff_id = SelectField('Assigned Staff', coerce=int, validators=[DataRequired(message="Please select a staff member.")])
+    fee_monthly = FloatField('Monthly Fee', validators=[DataRequired(message="Monthly fee is required.")])
+    fee_quarterly = FloatField('Quarterly Fee', validators=[Optional()])
+    submit = SubmitField('Create Batch')
+
+    def __init__(self, *args, **kwargs):
+        super(BatchForm, self).__init__(*args, **kwargs)
+        self.staff_id.choices = [(s.id, s.name) for s in Staff.query.order_by(Staff.name).all()]
+
+class AssignStudentForm(FlaskForm):
+    """Form for assigning a student to a batch (by admin or staff)."""
+    student_id = SelectField('Student', coerce=int, validators=[DataRequired(message="Please select a student.")])
+    submit = SubmitField('Assign Student')
+
+    def __init__(self, *args, **kwargs):
+        super(AssignStudentForm, self).__init__(*args, **kwargs)
+        self.student_id.choices = [(s.id, s.full_name) for s in Student.query.order_by(Student.full_name).all()]
+
+class AttendanceForm(FlaskForm):
+    """Form for marking attendance for a student in a batch (by admin or staff)."""
+    present = BooleanField('Present')
+    notes = TextAreaField('Notes', validators=[Optional()])
+    submit = SubmitField('Mark Attendance')
+
+class PaymentForm(FlaskForm):
+    student_id = SelectField('Student', coerce=int, validators=[DataRequired()])
+    batch_id = SelectField('Batch', coerce=int, validators=[DataRequired()])
+    amount = FloatField('Amount', validators=[DataRequired()])
+    due_date = DateField('Due Date', default=datetime.utcnow, validators=[Optional()])
+    status = SelectField('Status', choices=[
+        ('paid', 'Paid'),
+        ('unpaid', 'Unpaid'),
+        ('partial', 'Partial')
+    ], validators=[DataRequired()])
+    submit = SubmitField('Update Payment')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.student_id.choices = [(s.id, s.full_name) for s in Student.query.all()]
+        self.batch_id.choices = [(b.id, b.name) for b in Batch.query.all()]
+
+class PublicStudentRegistrationForm(FlaskForm):
+    """Form for public student registration (includes password)."""
+    full_name = StringField('Full Name', validators=[DataRequired(message="Full name is required.")])
+    age = IntegerField('Age', validators=[DataRequired(message="Age is required.")])
+    contact_number = StringField('Contact Number', validators=[Optional()])
+    address = StringField('Address', validators=[Optional()])
+    guardian_name = StringField('Guardian Name (if minor)', validators=[Optional()])
+    email = StringField('Email', validators=[DataRequired(message="Email is required."), Email()])
+    emergency_contact = StringField('Emergency Contact', validators=[Optional()])
+    class_type = SelectField('Class Type', choices=[
+        ('Hip-Hop', 'Hip-Hop'),
+        ('Salsa', 'Salsa'),
+        ('Classical', 'Classical')
+    ], validators=[DataRequired(message="Please select a class type.")])
+    
+    # Add password fields for public registration
+    password = PasswordField('Password', validators=[
+        DataRequired(message="Password is required."),
+        Length(min=6, message="Password must be at least 6 characters.")
+    ])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        DataRequired(message="Please confirm the password."),
+        EqualTo('password', message="Passwords must match.")
+    ])
+    submit = SubmitField('Register')
+==================================================
+
+File: .\app\models.py
+from app import db, login_manager
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+from datetime import datetime
+
+class User(UserMixin, db.Model):
+    """Base user model for authentication and role-based access."""
+    __tablename__ = 'user'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), nullable=False)  # 'admin', 'staff', 'student'
+    active = db.Column(db.Boolean, default=True, nullable=False)
+    
+    # Relationships
+    student = db.relationship('Student', backref='user', uselist=False, lazy='joined')
+    staff = db.relationship('Staff', backref='user', uselist=False, lazy='joined')
+
+    def set_password(self, password):
+        """Hash and set the user's password."""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Verify the password against the stored hash."""
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f'<User {self.username} ({self.role})>'
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID for Flask-Login."""
+    return User.query.get(int(user_id))
+
+class Student(db.Model):
+    """Model for student details."""
+    __tablename__ = 'student'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    full_name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    contact_number = db.Column(db.String(20))
+    address = db.Column(db.String(200))
+    guardian_name = db.Column(db.String(100))
+    emergency_contact = db.Column(db.String(20))
+    class_type = db.Column(db.String(50), nullable=False)  # e.g., 'Hip-Hop', 'Salsa'
+    registration_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    # profile_picture = db.Column(db.String(200))  # Path to uploaded image, optional
+
+    # Relationships
+    batches = db.relationship('Batch', secondary='student_batch', backref='students')
+
+    def __repr__(self):
+        return f'<Student {self.full_name} ({self.class_type})>'
+
+class Staff(db.Model):
+    """Model for staff details."""
+    __tablename__ = 'staff'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20))
+    specialization = db.Column(db.String(50))  # e.g., 'Hip-Hop Instructor'
+    joining_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    salary = db.Column(db.Float)
+
+    # Relationships
+    batches = db.relationship('Batch', backref='staff', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<Staff {self.name} ({self.specialization})>'
+
+class Batch(db.Model):
+    """Model for dance batches (e.g., Morning Salsa)."""
+    __tablename__ = 'batch'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, index=True)  # e.g., 'Morning Salsa'
+    staff_id = db.Column(db.Integer, db.ForeignKey('staff.id'), nullable=False)
+    fee_monthly = db.Column(db.Float, nullable=False)
+    fee_quarterly = db.Column(db.Float)
+
+    def __repr__(self):
+        return f'<Batch {self.name}>'
+
+class StudentBatch(db.Model):
+    """Many-to-many relationship between Student and Batch."""
+    __tablename__ = 'student_batch'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+
+    # Unique constraint to prevent duplicate assignments
+    __table_args__ = (db.UniqueConstraint('student_id', 'batch_id', name='uix_student_batch'),)
+
+    def __repr__(self):
+        return f'<StudentBatch student_id={self.student_id}, batch_id={self.batch_id}>'
+
+class Attendance(db.Model):
+    """Model for tracking student attendance in a batch."""
+    __tablename__ = 'attendance'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    date = db.Column(db.Date, default=datetime.utcnow, nullable=False)
+    present = db.Column(db.Boolean, default=False, nullable=False)
+    notes = db.Column(db.Text)
+
+    # Relationships
+    student = db.relationship('Student', backref='attendances')
+    batch = db.relationship('Batch', backref='attendances')
+
+    # Unique constraint to prevent multiple attendance records for the same student/batch/date
+    __table_args__ = (db.UniqueConstraint('student_id', 'batch_id', 'date', name='uix_attendance'),)
+
+    def __repr__(self):
+        return f'<Attendance student_id={self.student_id}, batch_id={self.batch_id}, date={self.date}>'
+
+class Payment(db.Model):
+    """Model for tracking student payments for a batch."""
+    __tablename__ = 'payment'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    due_date = db.Column(db.Date, nullable=True)
+    paid_date = db.Column(db.Date)
+    status = db.Column(db.String(20), default='unpaid', nullable=False)  # 'paid', 'unpaid', 'partial'
+
+    # Relationships
+    student = db.relationship('Student', backref='payments')
+    batch = db.relationship('Batch', backref='payments')
+
+    def __repr__(self):
+        return f'<Payment student_id={self.student_id}, batch_id={self.batch_id}, status={self.status}>'
+==================================================
+
+File: .\app\routes.py
+from flask import render_template, redirect, url_for, flash, request, send_file, jsonify, abort
+from flask_login import login_user, logout_user, current_user, login_required 
+from app import db
+from app.models import User, Student, Staff, Batch, Attendance, Payment, StudentBatch
+from app.forms import LoginForm, StudentRegistrationForm, StaffRegistrationForm, AttendanceForm, PaymentForm , BatchForm, AssignStudentForm, PublicStudentRegistrationForm
+from io import BytesIO
+import pandas as pd
+from datetime import datetime, date
+from flask import Blueprint
+import os
+
+# Blueprint for better organization
+bp = Blueprint('main', __name__)
+
+def role_required(roles):
+    """Decorator to restrict access to specific roles."""
+    from functools import wraps
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if current_user.role not in roles:
+                flash('Access denied.', 'danger')
+                return redirect(url_for('main.dashboard'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+# Authentication Routes
+@bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data) and user.active:
+            login_user(user)
+            flash('Login successful!', 'success')
+            return redirect(url_for('main.dashboard'))
+        flash('Invalid username or password', 'danger')
+    return render_template('login.html', form=form)
+
+@bp.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('main.login'))
+
+# Dashboard Redirect Based on Role
+@bp.route('/dashboard')
+@login_required
+def dashboard():
+    if current_user.role == 'admin':
+        return redirect(url_for('main.admin_dashboard'))
+    elif current_user.role == 'staff':
+        return redirect(url_for('main.staff_dashboard'))
+    elif current_user.role == 'student':
+        return redirect(url_for('main.student_dashboard'))
+    return 'Invalid role', 403
+
+# Admin Routes
+@bp.route('/admin/dashboard')
+@login_required
+@role_required(['admin'])
+def admin_dashboard():
+    total_students = Student.query.count()
+    total_staff = Staff.query.count()
+    total_batches = Batch.query.count()
+    unpaid_payments = Payment.query.filter_by(status='unpaid').count()
+    return render_template('admin_dashboard.html', 
+                         total_students=total_students, 
+                         total_staff=total_staff, 
+                         total_batches=total_batches, 
+                         unpaid_payments=unpaid_payments)
+
+@bp.route('/admin/staff/register', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def register_staff():
+    form = StaffRegistrationForm()
+    if form.validate_on_submit():
+        # Check if username or email already exists
+        if User.query.filter_by(username=form.username.data).first() or User.query.filter_by(email=form.email.data).first():
+            flash('Username or email already exists.', 'danger')
+            return render_template('register_staff.html', form=form)
+        user = User(username=form.username.data, email=form.email.data, role='staff')
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        staff = Staff(user_id=user.id, name=form.name.data, phone=form.phone.data, 
+                      specialization=form.specialization.data, salary=form.salary.data)
+        db.session.add(staff)
+        db.session.commit()
+        flash('Staff registered successfully.', 'success')
+        return redirect(url_for('main.admin_dashboard'))
+    return render_template('register_staff.html', form=form)
+
+@bp.route('/admin/staff/list')
+@login_required
+def staff_list():
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('main.dashboard'))
+    staff_members = Staff.query.all()
+    return render_template('staff_list.html', staff_members=staff_members)
+
+# Student Routes
+@bp.route('/student/register', methods=['GET', 'POST'])
+@login_required
+def register_student():
+    if current_user.role not in ['admin', 'staff']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('main.dashboard'))
+    form = StudentRegistrationForm()
+    if form.validate_on_submit():
+        # Check if email already exists
+        if User.query.filter_by(email=form.email.data).first():
+            flash('Email already registered.', 'danger')
+            return render_template('register_student.html', form=form)
+        
+        # Generate username from email and ensure it's unique
+        username = form.email.data.split('@')[0]
+        counter = 1
+        original_username = username
+        while User.query.filter_by(username=username).first():
+            username = f"{original_username}{counter}"
+            counter += 1
+            
+        user = User(username=username, email=form.email.data, role='student')
+        user.set_password('defaultpass')  # TODO: Generate random or send via email
+        db.session.add(user)
+        db.session.commit()
+        student = Student(user_id=user.id, full_name=form.full_name.data, age=form.age.data, 
+                         contact_number=form.contact_number.data, address=form.address.data, 
+                         guardian_name=form.guardian_name.data, emergency_contact=form.emergency_contact.data, 
+                         class_type=form.class_type.data)
+        db.session.add(student)
+        db.session.commit()
+        flash('Student registered successfully.', 'success')
+        return redirect(url_for('main.student_list'))
+    return render_template('register_student.html', form=form)
+
+@bp.route('/student/list')
+@login_required
+@role_required(['admin', 'staff'])
+def student_list():
+    students = Student.query.filter_by().all()
+    return render_template('student_list.html', students=students)
+
+@bp.route('/student/edit/<int:student_id>', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin', 'staff'])
+def edit_student(student_id):
+    student = Student.query.get_or_404(student_id)
+    form = StudentRegistrationForm(obj=student)
+    if form.validate_on_submit():
+        student.full_name = form.full_name.data
+        student.age = form.age.data
+        student.contact_number = form.contact_number.data
+        student.address = form.address.data
+        student.guardian_name = form.guardian_name.data
+        student.emergency_contact = form.emergency_contact.data
+        student.class_type = form.class_type.data
+        student.user.email = form.email.data
+        db.session.commit()
+        flash('Student updated successfully.', 'success')
+        return redirect(url_for('main.student_list'))
+    return render_template('edit_student.html', form=form, student=student)
+
+@bp.route('/student/delete/<int:student_id>', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def delete_student(student_id):
+    student = Student.query.get_or_404(student_id)
+    user = student.user
+    user.active = False
+    db.session.commit()
+    flash('Student deactivated.', 'success')
+    return redirect(url_for('main.student_list'))
+
+# Staff Dashboard
+@bp.route('/staff/dashboard')
+@login_required
+@role_required(['staff'])
+def staff_dashboard():
+    staff = current_user.staff
+    assigned_batches = Batch.query.filter_by(staff_id=staff.id).all()
+    assigned_students = Student.query.join(StudentBatch).join(Batch).filter(Batch.staff_id == staff.id).all()
+    return render_template('staff_dashboard.html', assigned_batches=assigned_batches, assigned_students=assigned_students)
+
+# Batch Routes
+@bp.route('/batch/create', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def create_batch():
+    form = BatchForm()  # Assume a BatchForm with name, staff_id, fee_monthly, fee_quarterly
+    form.staff_id.choices = [(s.id, s.name) for s in Staff.query.all()]
+    if form.validate_on_submit():
+        batch = Batch(name=form.name.data, staff_id=form.staff_id.data, 
+                      fee_monthly=form.fee_monthly.data, fee_quarterly=form.fee_quarterly.data)
+        db.session.add(batch)
+        db.session.commit()
+        flash('Batch created successfully.', 'success')
+        return redirect(url_for('main.batch_list'))
+    return render_template('create_batch.html', form=form)
+
+@bp.route('/batch/list')
+@login_required
+@role_required(['admin', 'staff'])
+def batch_list():
+    batches = Batch.query.all()
+    return render_template('batch_list.html', batches=batches)
+
+@bp.route('/batch/assign_student/<int:batch_id>', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin', 'staff'])
+def assign_student_to_batch(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    form = AssignStudentForm()  # Assume form with student_id
+    form.student_id.choices = [(s.id, s.full_name) for s in Student.query.all()]
+    if form.validate_on_submit():
+        student_batch = StudentBatch(student_id=form.student_id.data, batch_id=batch_id)
+        db.session.add(student_batch)
+        db.session.commit()
+        flash('Student assigned to batch.', 'success')
+        return redirect(url_for('main.batch_list'))
+    return render_template('assign_student.html', form=form, batch=batch)
+
+# Attendance Routes
+@bp.route('/attendance/mark/<int:batch_id>', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin', 'staff'])
+def mark_attendance(batch_id):
+    batch = Batch.query.get_or_404(batch_id)
+    students = Student.query.join(StudentBatch).filter(StudentBatch.batch_id == batch_id).all()
+    forms = {student.id: AttendanceForm(prefix=str(student.id)) for student in students}
+    if request.method == 'POST':
+        for student in students:
+            form = forms[student.id]
+            if form.validate_on_submit():
+                attendance = Attendance(student_id=student.id, batch_id=batch_id, 
+                                       date=datetime.utcnow().date(), 
+                                       present=form.present.data, 
+                                       notes=form.notes.data)
+                db.session.add(attendance)
+        db.session.commit()
+        flash('Attendance marked successfully.', 'success')
+        return redirect(url_for('main.batch_list'))
+    return render_template('attendance.html', forms=forms, students=students, batch=batch)
+
+# Payment Routes
+@bp.route('/payment/update/<int:student_id>', methods=['GET', 'POST'])
+@login_required
+def update_payment(student_id):
+    """Create or update a payment record."""
+    if current_user.role not in ['admin', 'staff']:
+        abort(403)
+
+    payment_id = request.args.get('payment_id', type=int)
+    payment = Payment.query.get_or_404(payment_id) if payment_id else None
+    student = None
+
+    if payment_id:
+        student = payment.student
+    elif student_id:
+        student = Student.query.get_or_404(student_id)
+    # If student_id is 0, this is a generic "add payment" page.
+
+    batches = Batch.query.all()
+    # Pass all students to the template for the dropdown if creating a new payment.
+    all_students = Student.query.order_by(Student.full_name).all() if not student else None
+
+    if request.method == 'POST':
+        batch_id = request.form.get('batch_id', type=int)
+        amount = request.form.get('amount', type=float)
+        due_date_str = request.form.get('due_date')
+        paid_date_str = request.form.get('paid_date')
+        status = request.form.get('status')
+
+        if not batch_id or not amount or not status:
+            flash('Batch, Amount, and Status are required.', 'danger')
+            return redirect(request.url)
+
+        if payment:
+            # Update existing payment
+            payment.batch_id = batch_id
+            payment.amount = amount
+            payment.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else None
+            payment.paid_date = datetime.strptime(paid_date_str, '%Y-%m-%d').date() if paid_date_str else None
+            payment.status = status
+            flash('Payment updated successfully.', 'success')
+        else:
+            # Create new payment
+            final_student_id = student.id if student else request.form.get('student_id', type=int)
+            if not final_student_id:
+                flash('Student is required for a new payment.', 'danger')
+                return redirect(request.url)
+            new_payment = Payment(
+                student_id=final_student_id,
+                batch_id=batch_id,
+                amount=amount,
+                due_date=datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else None,
+                paid_date=datetime.strptime(paid_date_str, '%Y-%m-%d').date() if paid_date_str else None,
+                status=status
+            )
+            db.session.add(new_payment)
+            flash('Payment created successfully.', 'success')
+
+        db.session.commit()
+        return redirect(url_for('main.payment_list'))
+
+    return render_template('update_payment.html',
+                         student=student,
+                         batches=batches,
+                         payment=payment,
+                         students=all_students)
+
+@bp.route('/payment/list')
+@login_required
+def payment_list():
+    if current_user.role not in ['admin', 'staff']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('main.dashboard'))
+    payments = Payment.query.all()
+    return render_template('payment_list.html', payments=payments)
+
+# Student Dashboard
+@bp.route('/student/dashboard')
+@login_required
+def student_dashboard():
+    if current_user.role != 'student':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('main.dashboard'))
+    student = current_user.student
+    attendances = Attendance.query.filter_by(student_id=student.id).all()
+    payments = Payment.query.filter_by(student_id=student.id).all()
+    batches = Batch.query.join(StudentBatch).filter(StudentBatch.student_id == student.id).all()
+    return render_template('student_dashboard.html', student=student, attendances=attendances, payments=payments, batches=batches)
+
+# Reports Export
+@bp.route('/reports/students')
+@login_required
+@role_required(['admin'])
+def export_students():
+    students = Student.query.all()
+    df = pd.DataFrame([{
+        'ID': s.id,
+        'Name': s.full_name,
+        'Age': s.age,
+        'Class': s.class_type,
+        'Contact': s.contact_number,
+        'Email': s.user.email
+    } for s in students])
+    output = BytesIO()
+    df.to_csv(output, index=False)
+    output.seek(0)
+    return send_file(output, mimetype='text/csv', download_name='students_report.csv', as_attachment=True)
+
+@bp.route('/reports/attendance')
+@login_required
+@role_required(['admin'])
+def export_attendance():
+    attendances = Attendance.query.all()
+    df = pd.DataFrame([{
+        'Student ID': a.student_id,
+        'Student Name': a.student.full_name,
+        'Batch': a.batch.name,
+        'Date': a.date,
+        'Present': 'Yes' if a.present else 'No',
+        'Notes': a.notes
+    } for a in attendances])
+    output = BytesIO()
+    df.to_csv(output, index=False)
+    output.seek(0)
+    return send_file(output, mimetype='text/csv', download_name='attendance_report.csv', as_attachment=True)
+
+@bp.route('/register', methods=['GET', 'POST'])
+def public_register():
+    """Public registration page for students."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+    
+    form = PublicStudentRegistrationForm()
+    if form.validate_on_submit():
+        # Check if email already exists
+        if User.query.filter_by(email=form.email.data).first():
+            flash('Email already registered.', 'danger')
+            return render_template('register.html', form=form)
+        
+        # Generate username from email
+        username = form.email.data.split('@')[0]
+        # Check if username exists, append numbers if needed
+        counter = 1
+        original_username = username
+        while User.query.filter_by(username=username).first():
+            username = f"{original_username}{counter}"
+            counter += 1
+        
+        user = User(username=username, email=form.email.data, role='student')
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        
+        student = Student(user_id=user.id, full_name=form.full_name.data, age=form.age.data,
+                         contact_number=form.contact_number.data, address=form.address.data,
+                         guardian_name=form.guardian_name.data, emergency_contact=form.emergency_contact.data,
+                         class_type=form.class_type.data)
+        db.session.add(student)
+        db.session.commit()
+        
+        flash('Registration successful! Please login.', 'success')
+        return redirect(url_for('main.login'))
+    
+    return render_template('register.html', form=form)
+
+@bp.route('/api/batches/<int:batch_id>')
+@login_required
+def get_batch_fee(batch_id):
+    """Get fee information for a batch."""
+    batch = Batch.query.get_or_404(batch_id)
+    return jsonify({
+        'fee_monthly': batch.fee_monthly,
+        'fee_quarterly': batch.fee_quarterly
+    })
+
+@bp.route('/api/batches')
+@login_required
+def get_all_batches():
+    """Get all batches."""
+    batches = Batch.query.all()
+    
+    return jsonify({
+        'batches': [{
+            'id': batch.id,
+            'name': batch.name,
+            'fee_monthly': batch.fee_monthly,
+            'fee_quarterly': batch.fee_quarterly
+        } for batch in batches]
+    })
+
+==================================================
+
+File: .\app\__init__.py
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_login import LoginManager
+from flask_bootstrap import Bootstrap5
+from app.config import config_by_name
+import os
+from datetime import datetime
+
+# Initialize extensions
+db = SQLAlchemy()
+migrate = Migrate()
+login_manager = LoginManager()
+bootstrap = Bootstrap5()
+
+def create_app():
+    """Application factory to create and configure the Flask app."""
+    app = Flask(__name__)
+
+    # Load configuration based on environment
+    env = os.environ.get('FLASK_ENV', 'development')
+    app.config.from_object(config_by_name[env])
+
+    # Initialize extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
+    bootstrap.init_app(app)
+
+
+
+    with app.app_context():
+        db.create_all()
+    # Configure Flask-Login
+    login_manager.login_view = 'main.login'  # Redirect to login page if not authenticated
+    login_manager.login_message = 'Please log in to access this page.'
+    login_manager.login_message_category = 'info'
+
+    # Custom Jinja2 filter for date formatting (used in templates like attendance.html, payments.html)
+    @app.template_filter('datetimeformat')
+    def datetimeformat(value, format='%Y-%m-%d'):
+        if value == 'now':
+            return datetime.utcnow().strftime(format)
+        if hasattr(value, 'strftime'):
+            return value.strftime(format)
+        return value
+
+    # Register blueprints
+    from app.routes import bp as main_bp
+    app.register_blueprint(main_bp)
+
+    # Import models to ensure they are registered with SQLAlchemy
+    from app import models
+
+    return app
+==================================================
+
+File: .\app\static\css\custom.css
+/* General Styling */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Arial', sans-serif;
+    color: #333;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color: #004aad; /* Deep blue for dance school theme */
+    font-weight: 600;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+.card-header {
+    background-color: #ff6f61; /* Coral accent */
+    color: white;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+.card-title {
+    margin-bottom: 0;
+}
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Tables */
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+.table th {
+    background-color: #004aad;
+    color: white;
+    font-weight: 500;
+}
+.table td {
+    vertical-align: middle;
+}
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 74, 173, 0.05);
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 74, 173, 0.1);
+}
+
+/* Forms */
+.form-group label {
+    font-weight: 600;
+    color: #004aad;
+}
+.form-control {
+    border-radius: 5px;
+    border: 1px solid #ced4da;
+    transition: border-color 0.3s;
+}
+.form-control:focus {
+    border-color: #ff6f61;
+    box-shadow: 0 0 5px rgba(255, 111, 97, 0.5);
+}
+.text-danger {
+    font-size: 0.85em;
+    margin-top: 0.25rem;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: #004aad;
+    border-color: #004aad;
+    border-radius: 5px;
+    padding: 0.5rem 1.5rem;
+}
+.btn-primary:hover {
+    background-color: #003580;
+    border-color: #003580;
+}
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    border-radius: 5px;
+}
+.btn-outline-primary {
+    border-color: #004aad;
+    color: #004aad;
+}
+.btn-outline-primary:hover {
+    background-color: #004aad;
+    color: white;
+}
+.btn-sm {
+    font-size: 0.85rem;
+}
+
+/* Badges */
+.badge {
+    font-size: 0.9em;
+    padding: 0.5em 0.75em;
+    border-radius: 5px;
+}
+.badge.bg-success {
+    background-color: #28a745;
+}
+.badge.bg-danger {
+    background-color: #dc3545;
+}
+.badge.bg-warning {
+    background-color: #ffc107;
+}
+
+/* Flash Messages */
+.alert {
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+}
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+/* Dashboard Cards */
+.card .display-4 {
+    font-size: 2.5rem;
+    color: #ff6f61;
+}
+.card:nth-child(1) {
+    border-left: 5px solid #28a745;
+}
+.card:nth-child(2) {
+    border-left: 5px solid #004aad;
+}
+.card:nth-child(3) {
+    border-left: 5px solid #dc3545;
+}
+
+/* Navbar */
+.navbar {
+    background-color: #004aad;
+}
+.navbar-brand, .nav-link {
+    color: white !important;
+}
+.nav-link:hover {
+    color: #ff6f61 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table {
+        font-size: 0.9rem;
+    }
+    .btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.9rem;
+    }
+    .display-4 {
+        font-size: 2rem;
+    }
+}
+
+/* Accessibility */
+:focus {
+    outline: 2px solid #ff6f61;
+    outline-offset: 2px;
+}
+==================================================
+
+File: .\app\static\js\custom.js
+document.addEventListener('DOMContentLoaded', function () {
+    // Real-time form validation feedback
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        const inputs = form.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.addEventListener('input', function () {
+                if (input.checkValidity()) {
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                } else {
+                    input.classList.remove('is-valid');
+                    input.classList.add('is-invalid');
+                }
+            });
+        });
+
+        // Prevent form submission if invalid
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                form.querySelectorAll('input, select').forEach(input => {
+                    if (!input.checkValidity()) {
+                        input.classList.add('is-invalid');
+                    }
+                });
+            }
+        });
+    });
+
+    // Dynamic batch selection in payments.html
+    const studentSelect = document.querySelector('select[name="student_id"]');
+    const batchSelect = document.querySelector('select[name="batch_id"]');
+    if (studentSelect && batchSelect) {
+        studentSelect.addEventListener('change', function () {
+            const studentId = this.value;
+            if (studentId) {
+                fetch(`/api/batches`, {
+    method: 'GET',
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
+                .then(response => response.json())
+                .then(data => {
+                    batchSelect.innerHTML = '<option value="">Select a batch</option>';
+                    data.batches.forEach(batch => {
+                        const option = document.createElement('option');
+                        option.value = batch.id;
+                        option.textContent = batch.name;
+                        batchSelect.appendChild(option);
+                    });
+                    batchSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error fetching batches:', error);
+                    batchSelect.innerHTML = '<option value="">Error loading batches</option>';
+                    batchSelect.disabled = true;
+                });
+            } else {
+                batchSelect.innerHTML = '<option value="">Select a batch</option>';
+                batchSelect.disabled = true;
+            }
+        });
+    }
+
+    // Table sorting functionality for reports.html, staff_dashboard.html, student_dashboard.html
+    const tables = document.querySelectorAll('.table');
+    tables.forEach(table => {
+        const headers = table.querySelectorAll('th');
+        headers.forEach((header, index) => {
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', function () {
+                const rows = Array.from(table.querySelector('tbody').rows);
+                const isAscending = header.dataset.sort !== 'asc';
+                header.dataset.sort = isAscending ? 'asc' : 'desc';
+
+                // Update sort indicators
+                headers.forEach(h => h.innerHTML = h.innerHTML.replace(/ (↑|↓)/, ''));
+                header.innerHTML += isAscending ? ' ↑' : ' ↓';
+
+                rows.sort((a, b) => {
+                    let aValue = a.cells[index].textContent.trim();
+                    let bValue = b.cells[index].textContent.trim();
+
+                    // Handle numeric columns (e.g., Age, Amount)
+                    if (!isNaN(parseFloat(aValue)) && !isNaN(parseFloat(bValue))) {
+                        aValue = parseFloat(aValue.replace('$', ''));
+                        bValue = parseFloat(bValue.replace('$', ''));
+                        return isAscending ? aValue - bValue : bValue - aValue;
+                    }
+
+                    // Handle date columns (e.g., Due Date, Registration Date)
+                    if (aValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        aValue = new Date(aValue).getTime();
+                        bValue = new Date(bValue).getTime();
+                        return isAscending ? aValue - bValue : bValue - aValue;
+                    }
+
+                    // Handle text columns
+                    return isAscending
+                        ? aValue.localeCompare(bValue)
+                        : bValue.localeCompare(aValue);
+                });
+
+                table.querySelector('tbody').innerHTML = '';
+                rows.forEach(row => table.querySelector('tbody').appendChild(row));
+            });
+        });
+    });
+
+    // Confirmation dialogs for delete actions (if applicable)
+    const deleteButtons = document.querySelectorAll('a.btn-outline-danger');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function (event) {
+            if (!confirm('Are you sure you want to delete this record?')) {
+                event.preventDefault();
+            }
+        });
+    });
+
+    // Accessibility: Add keyboard support for table sorting
+    headers.forEach(header => {
+        header.setAttribute('tabindex', '0');
+        header.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                header.click();
+            }
+        });
+    });
+});
+==================================================
+
+File: .\app\templates\admin_dashboard.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Admin Dashboard</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Summary Cards -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mb-5">
+        <div class="col">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Students</h5>
+                    <p class="card-text display-4">{{ total_students }}</p>
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-primary">View Students</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Active Staff</h5>
+                    <p class="card-text display-4">{{ total_staff }}</p>
+                    <a href="{{ url_for('main.staff_list') }}" class="btn btn-primary">View Staff</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Batches</h5>
+                    <p class="card-text display-4">{{ total_batches }}</p>
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-primary">View Batches</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Unpaid Payments</h5>
+                    <p class="card-text display-4">{{ unpaid_payments }}</p>
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-primary">View Payments</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h2 class="mb-3">Quick Actions</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Students</h5>
+                    <p class="card-text">Register, edit, or deactivate students.</p>
+                    <a href="{{ url_for('main.register_student') }}" class="btn btn-outline-primary">Add Student</a>
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-secondary">List Students</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Staff</h5>
+                    <p class="card-text">Register or view staff members.</p>
+                    <a href="{{ url_for('main.register_staff') }}" class="btn btn-outline-primary">Add Staff</a>
+                    <a href="{{ url_for('main.staff_list') }}" class="btn btn-outline-secondary">List Staff</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Batches</h5>
+                    <p class="card-text">Create or assign students to batches.</p>
+                    <a href="{{ url_for('main.create_batch') }}" class="btn btn-outline-primary">Create Batch</a>
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-secondary">List Batches</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Attendance</h5>
+                    <p class="card-text">View or mark attendance for batches.</p>
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary">Mark Attendance</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Payments</h5>
+                    <p class="card-text">Update or view payment statuses.</p>
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-outline-primary">View Payments</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Reports</h5>
+                    <p class="card-text">Export student lists or attendance reports.</p>
+                    <a href="{{ url_for('main.export_students') }}" class="btn btn-outline-primary">Export Students</a>
+                    <a href="{{ url_for('main.export_attendance') }}" class="btn btn-outline-secondary">Export Attendance</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\assign_student.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Assign Student to {{ batch.name }}</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    <div class="form-group">
+                        {{ form.student_id.label(class="form-label") }}
+                        {{ form.student_id(class="form-control") }}
+                        {% if form.student_id.errors %}
+                            {% for error in form.student_id.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\attendance.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Mark Attendance for {{ batch.name }}</h1>
+    <p class="text-muted">Date: {{ 'now'|datetimeformat('%Y-%m-%d') }}</p>
+
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Attendance Form -->
+    <form method="POST">
+        {% for student in students %}
+            {% set form = forms[student.id] %}
+            {{ form.hidden_tag() }}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ student.full_name }}</h5>
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <div class="form-check">
+                                {{ form.present(class="form-check-input") }}
+                                {{ form.present.label(class="form-check-label") }}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                {{ form.notes.label(class="form-label") }}
+                                {{ form.notes(class="form-control", rows=2) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        
+        <!-- Submit Button -->
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Save Attendance</button>
+            <a href="{{ url_for('main.batch_list') }}" class="btn btn-secondary">Back to Batches</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\base.html
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Dance School Management</title>
+    {{ bootstrap.load_css() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('main.dashboard') }}">Dance School</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if not current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.public_register') }}">Register</a>
+                    </li>
+                    {% endif %}
+
+
+                    {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.student_list') }}">Students</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.staff_list') }}">Staff</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.batch_list') }}">Batches</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.payment_list') }}">Payments</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Reports
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('main.export_students') }}">Export
+                                    Students</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.export_attendance') }}">Export
+                                    Attendance</a></li>
+                        </ul>
+                    </li>
+                    {% elif current_user.role == 'staff' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.staff_dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.student_list') }}">Students</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.batch_list') }}">Batches</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.payment_list') }}">Payments</a>
+                    </li>
+                    {% elif current_user.role == 'student' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.student_dashboard') }}">Dashboard</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.logout') }}">Logout</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Content Block -->
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- Bootstrap JS and Custom Scripts -->
+    {{ bootstrap.load_js() }}
+    <script src="{{ url_for('static', filename='js/custom.js') }}"></script>
+</body>
+
+</html>
+==================================================
+
+File: .\app\templates\batch_list.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Batches</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if current_user.role == 'admin' %}
+        <div class="mb-3">
+            <a href="{{ url_for('main.create_batch') }}" class="btn btn-primary">Create New Batch</a>
+        </div>
+    {% endif %}
+
+    {% if batches %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Batch Name</th>
+                        <th>Instructor</th>
+                        <th>Monthly Fee</th>
+                        <th>Quarterly Fee</th>
+                        <th>Student Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batches %}
+                        <tr>
+                            <td>{{ batch.name }}</td>
+                            <td>{{ batch.staff.name }}</td>
+                            <td>${{ "%.2f" % batch.fee_monthly }}</td>
+                            <td>${{ "%.2f" % batch.fee_quarterly if batch.fee_quarterly else 'N/A' }}</td>
+                            <td>{{ batch.students|length }}</td>
+                            <td>
+                                <a href="{{ url_for('main.assign_student_to_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">Assign Student</a>
+                                <a href="{{ url_for('main.mark_attendance', batch_id=batch.id) }}" class="btn btn-sm btn-outline-secondary">Attendance</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No batches found.</p>
+    {% endif %}
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\create_batch.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Create New Batch</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control", placeholder="Enter batch name") }}
+                            {% if form.name.errors %}
+                                {% for error in form.name.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.staff_id.label(class="form-label") }}
+                            {{ form.staff_id(class="form-control") }}
+                            {% if form.staff_id.errors %}
+                                {% for error in form.staff_id.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.fee_monthly.label(class="form-label") }}
+                            {{ form.fee_monthly(class="form-control", placeholder="Enter monthly fee") }}
+                            {% if form.fee_monthly.errors %}
+                                {% for error in form.fee_monthly.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.fee_quarterly.label(class="form-label") }}
+                            {{ form.fee_quarterly(class="form-control", placeholder="Enter quarterly fee (optional)") }}
+                            {% if form.fee_quarterly.errors %}
+                                {% for error in form.fee_quarterly.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\edit_student.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Edit Student: {{ student.full_name }}</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Edit Student Form -->
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.full_name.label(class="form-label") }}
+                            {{ form.full_name(class="form-control", placeholder="Enter full name") }}
+                            {% if form.full_name.errors %}
+                                {% for error in form.full_name.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.age.label(class="form-label") }}
+                            {{ form.age(class="form-control", placeholder="Enter age") }}
+                            {% if form.age.errors %}
+                                {% for error in form.age.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control", placeholder="Enter email") }}
+                            {% if form.email.errors %}
+                                {% for error in form.email.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.contact_number.label(class="form-label") }}
+                            {{ form.contact_number(class="form-control", placeholder="Enter contact number") }}
+                            {% if form.contact_number.errors %}
+                                {% for error in form.contact_number.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.address.label(class="form-label") }}
+                            {{ form.address(class="form-control", placeholder="Enter address") }}
+                            {% if form.address.errors %}
+                                {% for error in form.address.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.guardian_name.label(class="form-label") }}
+                            {{ form.guardian_name(class="form-control", placeholder="Enter guardian name (if minor)") }}
+                            {% if form.guardian_name.errors %}
+                                {% for error in form.guardian_name.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.emergency_contact.label(class="form-label") }}
+                            {{ form.emergency_contact(class="form-control", placeholder="Enter emergency contact") }}
+                            {% if form.emergency_contact.errors %}
+                                {% for error in form.emergency_contact.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.class_type.label(class="form-label") }}
+                            {{ form.class_type(class="form-control") }}
+                            {% if form.class_type.errors %}
+                                {% for error in form.class_type.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\login.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Login</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Login Form -->
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('main.login') }}">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.username.label(class="form-label") }}
+                    {{ form.username(class="form-control", placeholder="Enter username") }}
+                    {% if form.username.errors %}
+                        {% for error in form.username.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control", placeholder="Enter password") }}
+                    {% if form.password.errors %}
+                        {% for error in form.password.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\payments.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Manage Payments</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Add/Update Payment Form -->
+    <div class="card mb-5">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Add New Payment</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('main.payment_list') }}">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.student_id.label(class="form-label") }}
+                            {{ form.student_id(class="form-control") }}
+                            {% if form.student_id.errors %}
+                                {% for error in form.student_id.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.batch_id.label(class="form-label") }}
+                            {{ form.batch_id(class="form-control") }}
+                            {% if form.batch_id.errors %}
+                                {% for error in form.batch_id.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.amount.label(class="form-label") }}
+                            {{ form.amount(class="form-control", placeholder="Enter amount") }}
+                            {% if form.amount.errors %}
+                                {% for error in form.amount.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.due_date.label(class="form-label") }}
+                            {{ form.due_date(class="form-control") }}
+                            {% if form.due_date.errors %}
+                                {% for error in form.due_date.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-control") }}
+                            {% if form.status.errors %}
+                                {% for error in form.status.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Payments Table -->
+    <h2 class="mb-3">Payment Records</h2>
+    {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Batch</th>
+                        <th>Amount</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.student.full_name }}</td>
+                            <td>{{ payment.batch.name }}</td>
+                            <td>${{ "%.2f" % payment.amount }}</td>
+                            <td>{{ payment.due_date|datetimeformat('YYYY-MM-DD') }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if payment.status == 'paid' %}bg-success
+                                    {% elif payment.status == 'unpaid' %}bg-danger
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ payment.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main.update_payment', payment_id=payment.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No payment records found.</p>
+    {% endif %}
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\payment_list.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Payment Records</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="mb-3">
+        <a href="{{ url_for('main.update_payment', student_id=0) }}" class="btn btn-primary">Add New Payment</a>
+    </div>
+
+    {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Batch</th>
+                        <th>Amount</th>
+                        <th>Due Date</th>
+                        <th>Paid Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.student.full_name }}</td>
+                            <td>{{ payment.batch.name }}</td>
+                            <td>${{ "%.2f" % payment.amount }}</td>
+                            <td>{{ payment.due_date|datetimeformat('%Y-%m-%d') if payment.due_date else 'N/A' }}</td>
+                            <td>{{ payment.paid_date|datetimeformat('%Y-%m-%d') if payment.paid_date else 'N/A' }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if payment.status == 'paid' %}bg-success
+                                    {% elif payment.status == 'unpaid' %}bg-danger
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ payment.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main.update_payment', student_id=payment.student_id) }}?payment_id={{ payment.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No payment records found.</p>
+    {% endif %}
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\register.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Student Registration</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('main.public_register') }}">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.full_name.label(class="form-label") }}
+                            {{ form.full_name(class="form-control", placeholder="Enter full name") }}
+                            {% if form.full_name.errors %}
+                                {% for error in form.full_name.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.age.label(class="form-label") }}
+                            {{ form.age(class="form-control", placeholder="Enter age") }}
+                            {% if form.age.errors %}
+                                {% for error in form.age.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control", placeholder="Enter email address") }}
+                            {% if form.email.errors %}
+                                {% for error in form.email.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.password.label(class="form-label") }}
+                            {{ form.password(class="form-control", placeholder="Enter password") }}
+                            {% if form.password.errors %}
+                                {% for error in form.password.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.contact_number.label(class="form-label") }}
+                            {{ form.contact_number(class="form-control", placeholder="Enter contact number") }}
+                            {% if form.contact_number.errors %}
+                                {% for error in form.contact_number.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.class_type.label(class="form-label") }}
+                            {{ form.class_type(class="form-control") }}
+                            {% if form.class_type.errors %}
+                                {% for error in form.class_type.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.guardian_name.label(class="form-label") }}
+                            {{ form.guardian_name(class="form-control", placeholder="Enter guardian name") }}
+                            {% if form.guardian_name.errors %}
+                                {% for error in form.guardian_name.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.emergency_contact.label(class="form-label") }}
+                            {{ form.emergency_contact(class="form-control", placeholder="Enter emergency contact") }}
+                            {% if form.emergency_contact.errors %}
+                                {% for error in form.emergency_contact.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-group">
+                        {{ form.address.label(class="form-label") }}
+                        {{ form.address(class="form-control", placeholder="Enter address", rows="3") }}
+                        {% if form.address.errors %}
+                            {% for error in form.address.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-4">
+                    {{ form.submit(class="btn btn-primary btn-lg") }}
+                </div>
+            </form>
+            <div class="mt-3">
+                <p>Already have an account? <a href="{{ url_for('main.login') }}">Login here</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\register_staff.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Register Staff</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Register Staff Form -->
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('main.register_staff') }}">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control", placeholder="Enter full name") }}
+                            {% if form.name.errors %}
+                                {% for error in form.name.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.phone.label(class="form-label") }}
+                            {{ form.phone(class="form-control", placeholder="Enter phone number") }}
+                            {% if form.phone.errors %}
+                                {% for error in form.phone.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.specialization.label(class="form-label") }}
+                            {{ form.specialization(class="form-control", placeholder="Enter specialization") }}
+                            {% if form.specialization.errors %}
+                                {% for error in form.specialization.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.salary.label(class="form-label") }}
+                            {{ form.salary(class="form-control", placeholder="Enter salary") }}
+                            {% if form.salary.errors %}
+                                {% for error in form.salary.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.username.label(class="form-label") }}
+                            {{ form.username(class="form-control", placeholder="Enter username") }}
+                            {% if form.username.errors %}
+                                {% for error in form.username.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control", placeholder="Enter email") }}
+                            {% if form.email.errors %}
+                                {% for error in form.email.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.password.label(class="form-label") }}
+                            {{ form.password(class="form-control", placeholder="Enter password") }}
+                            {% if form.password.errors %}
+                                {% for error in form.password.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.confirm_password.label(class="form-label") }}
+                            {{ form.confirm_password(class="form-control", placeholder="Confirm password") }}
+                            {% if form.confirm_password.errors %}
+                                {% for error in form.confirm_password.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('main.staff_list') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\register_student.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    	<h1 class="mb-4">Register Student</h1>
+
+	<!-- Flash Messages -->
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+					{{ message }}
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+
+	<!-- Register Student Form -->
+	<div class="card">
+		<div class="card-body">
+			<form method="POST" action="{{ url_for('main.register_student') }}">
+				{{ form.hidden_tag() }}
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.full_name.label(class="form-label") }}
+							{{ form.full_name(class="form-control", placeholder="Enter full name") }}
+							{% if form.full_name.errors %}
+								{% for error in form.full_name.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.age.label(class="form-label") }}
+							{{ form.age(class="form-control", placeholder="Enter age") }}
+							{% if form.age.errors %}
+								{% for error in form.age.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.email.label(class="form-label") }}
+							{{ form.email(class="form-control", placeholder="Enter email") }}
+							{% if form.email.errors %}
+								{% for error in form.email.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.contact_number.label(class="form-label") }}
+							{{ form.contact_number(class="form-control", placeholder="Enter contact number") }}
+							{% if form.contact_number.errors %}
+								{% for error in form.contact_number.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.address.label(class="form-label") }}
+							{{ form.address(class="form-control", placeholder="Enter address") }}
+							{% if form.address.errors %}
+								{% for error in form.address.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.guardian_name.label(class="form-label") }}
+							{{ form.guardian_name(class="form-control", placeholder="Enter guardian name (if minor)") }}
+							{% if form.guardian_name.errors %}
+								{% for error in form.guardian_name.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.emergency_contact.label(class="form-label") }}
+							{{ form.emergency_contact(class="form-control", placeholder="Enter emergency contact") }}
+							{% if form.emergency_contact.errors %}
+								{% for error in form.emergency_contact.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+					<div class="col-md-6 mb-3">
+						<div class="form-group">
+							{{ form.class_type.label(class="form-label") }}
+							{{ form.class_type(class="form-control") }}
+							{% if form.class_type.errors %}
+								{% for error in form.class_type.errors %}
+									<div class="text-danger">{{ error }}</div>
+								{% endfor %}
+							{% endif %}
+						</div>
+					</div>
+				</div>
+				<div class="mt-4">
+					{{ form.submit(class="btn btn-primary") }}
+					<a href="{{ url_for('main.student_list') }}" class="btn btn-secondary">Cancel</a>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\reports.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Reports</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Report Options -->
+    <div class="card mb-5">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Available Reports</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <h6>Student List</h6>
+                    <p>View all registered students with their details.</p>
+                    <a href="{{ url_for('main.export_students') }}" class="btn btn-primary">Export as CSV</a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <h6>Attendance Summary</h6>
+                    <p>View attendance records for all students.</p>
+                    <a href="{{ url_for('main.export_attendance') }}" class="btn btn-primary">Export as CSV</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student List Report -->
+    <h2 class="mb-3">Student List</h2>
+    {% if students %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Age</th>
+                        <th>Class Type</th>
+                        <th>Email</th>
+                        <th>Contact Number</th>
+                        <th>Registration Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ student.full_name }}</td>
+                            <td>{{ student.age }}</td>
+                            <td>{{ student.class_type }}</td>
+                            <td>{{ student.user.email }}</td>
+                            <td>{{ student.contact_number or 'N/A' }}</td>
+                            <td>{{ student.registration_date|datetimeformat('YYYY-MM-DD') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No students found.</p>
+    {% endif %}
+
+    <!-- Attendance Summary Report -->
+    <h2 class="mb-3">Attendance Summary</h2>
+    {% if attendances %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Batch</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in attendances %}
+                        <tr>
+                            <td>{{ attendance.student.full_name }}</td>
+                            <td>{{ attendance.batch.name }}</td>
+                            <td>{{ attendance.date|datetimeformat('YYYY-MM-DD') }}</td>
+                            <td>
+                                <span class="badge {% if attendance.present %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ 'Present' if attendance.present else 'Absent' }}
+                                </span>
+                            </td>
+                            <td>{{ attendance.notes or 'N/A' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No attendance records found.</p>
+    {% endif %}
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\staff_dashboard.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Staff Dashboard</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Summary Cards -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Students</h5>
+                    <p class="card-text display-4">{{ total_students }}</p>
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-primary">View Students</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Assigned Batches</h5>
+                    <p class="card-text display-4">{{ total_batches }}</p>
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-primary">View Batches</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Unpaid Payments</h5>
+                    <p class="card-text display-4">{{ unpaid_payments }}</p>
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-primary">View Payments</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h2 class="mb-3">Quick Actions</h2>
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <a href="{{ url_for('main.student_list') }}" class="btn btn-outline-primary w-100">Manage Students</a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary w-100">Manage Batches</a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-outline-primary w-100">Manage Payments</a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <a href="{{ url_for('main.batch_list') }}" class="btn btn-outline-primary w-100">Mark Attendance</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assigned Batches -->
+    <h2 class="mt-5 mb-3">Your Assigned Batches</h2>
+    {% if batches %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Batch Name</th>
+                        <th>Fee (Monthly)</th>
+                        <th>Student Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batches %}
+                        <tr>
+                            <td>{{ batch.name }}</td>
+                            <td>${{ "%.2f" % batch.fee_monthly }}</td>
+                            <td>{{ batch.students.count() }}</td>
+                            <td>
+                                <a href="{{ url_for('main.mark_attendance', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">Mark Attendance</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No batches assigned.</p>
+    {% endif %}
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\staff_list.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Staff Members</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="d-flex justify-content-between mb-3">
+        <a href="{{ url_for('main.register_staff') }}" class="btn btn-primary">Add New Staff</a>
+    </div>
+
+    {% if staff_members %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Specialization</th>
+                        <th>Salary</th>
+                        <th>Join Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_members %}
+                        <tr>
+                            <td>{{ staff.name }}</td>
+                            <td>{{ staff.user.email }}</td>
+                            <td>{{ staff.phone or 'N/A' }}</td>
+                            <td>{{ staff.specialization or 'N/A' }}</td>
+                            <td>${{ "%.2f" % staff.salary if staff.salary else 'N/A' }}</td>
+                            <td>{{ staff.joining_date|datetimeformat('%Y-%m-%d') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No staff members found.</p>
+    {% endif %}
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\student_dashboard.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Welcome, {{ student.full_name }}!</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Summary Cards -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Enrolled Batches</h5>
+                    <p class="card-text display-4">{{ total_batches }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Recent Attendance</h5>
+                    <p class="card-text display-4">{{ recent_attendance }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Unpaid Payments</h5>
+                    <p class="card-text display-4">{{ unpaid_payments }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrolled Batches -->
+    <h2 class="mb-3">Your Enrolled Batches</h2>
+    {% if batches %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Batch Name</th>
+                        <th>Instructor</th>
+                        <th>Fee (Monthly)</th>
+                        <th>Class Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batches %}
+                        <tr>
+                            <td>{{ batch.name }}</td>
+                            <td>{{ batch.staff.name }}</td>
+                            <td>${{ "%.2f" % batch.fee_monthly }}</td>
+                            <td>{{ student.class_type }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">You are not enrolled in any batches.</p>
+    {% endif %}
+
+    <!-- Recent Attendance -->
+    <h2 class="mb-3">Recent Attendance</h2>
+    {% if attendances %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Batch</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in attendances %}
+                        <tr>
+                            <td>{{ attendance.date|datetimeformat('YYYY-MM-DD') }}</td>
+                            <td>{{ attendance.batch.name }}</td>
+                            <td>
+                                <span class="badge {% if attendance.present %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ 'Present' if attendance.present else 'Absent' }}
+                                </span>
+                            </td>
+                            <td>{{ attendance.notes or 'N/A' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No recent attendance records.</p>
+    {% endif %}
+
+    <!-- Payment Status -->
+    <h2 class="mb-3">Payment Status</h2>
+    {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Batch</th>
+                        <th>Amount</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.batch.name }}</td>
+                            <td>${{ "%.2f" % payment.amount }}</td>
+                            <td>{{ payment.due_date|datetimeformat('YYYY-MM-DD') }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if payment.status == 'paid' %}bg-success
+                                    {% elif payment.status == 'unpaid' %}bg-danger
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ payment.status|title }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No payment records found.</p>
+    {% endif %}
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\student_list.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Students</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="d-flex justify-content-between mb-3">
+        <a href="{{ url_for('main.register_student') }}" class="btn btn-primary">Add New Student</a>
+        {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('main.export_students') }}" class="btn btn-outline-primary">Export CSV</a>
+        {% endif %}
+    </div>
+
+    {% if students %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Age</th>
+                        <th>Email</th>
+                        <th>Class Type</th>
+                        <th>Contact</th>
+                        <th>Registration Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ student.full_name }}</td>
+                            <td>{{ student.age }}</td>
+                            <td>{{ student.user.email }}</td>
+                            <td>{{ student.class_type }}</td>
+                            <td>{{ student.contact_number or 'N/A' }}</td>
+                            <td>{{ student.registration_date|datetimeformat('%Y-%m-%d') }}</td>
+                            <td>
+                                <a href="{{ url_for('main.edit_student', student_id=student.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                {% if current_user.role == 'admin' %}
+                                    <form method="POST" action="{{ url_for('main.delete_student', student_id=student.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No students found.</p>
+    {% endif %}
+</div>
+{% endblock %}
+==================================================
+
+File: .\app\templates\update_payment.html
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    {% if payment %}
+        <h1 class="mb-4">Edit Payment for {{ student.full_name }}</h1>
+    {% else %}
+        <h1 class="mb-4">Add New Payment</h1>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="row">
+                    {% if students %} {# For creating a new payment, show a student dropdown #}
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            <label for="student_id" class="form-label">Student</label>
+                            <select name="student_id" id="student_id" class="form-control" required>
+                                <option value="">Select a student</option>
+                                {% for s in students %}
+                                    <option value="{{ s.id }}">{{ s.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    {% elif student %} {# For editing, the student is fixed #}
+                        <input type="hidden" name="student_id" value="{{ student.id }}">
+                    {% endif %}
+
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            <label for="batch_id" class="form-label">Batch</label>
+                            <select name="batch_id" id="batch_id" class="form-control" required>
+                                <option value="">Select a batch</option>
+                                {% for batch in batches %}
+                                    <option value="{{ batch.id }}" {% if payment and payment.batch_id == batch.id %}selected{% endif %}>
+                                        {{ batch.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            <label for="amount" class="form-label">Amount</label>
+                            <input type="number" step="0.01" name="amount" id="amount" class="form-control" placeholder="Enter amount" value="{{ payment.amount if payment else '' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            <label for="status" class="form-label">Status</label>
+                            <select name="status" id="status" class="form-control" required>
+                                <option value="unpaid" {% if payment and payment.status == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                                <option value="paid" {% if payment and payment.status == 'paid' %}selected{% endif %}>Paid</option>
+                                <option value="partial" {% if payment and payment.status == 'partial' %}selected{% endif %}>Partial</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            <label for="due_date" class="form-label">Due Date</label>
+                            <input type="date" name="due_date" id="due_date" class="form-control" value="{{ payment.due_date|datetimeformat('%Y-%m-%d') if payment and payment.due_date else '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            <label for="paid_date" class="form-label">Paid Date</label>
+                            <input type="date" name="paid_date" id="paid_date" class="form-control" value="{{ payment.paid_date|datetimeformat('%Y-%m-%d') if payment and payment.paid_date else '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">{% if payment %}Update{% else %}Create{% endif %} Payment</button>
+                    <a href="{{ url_for('main.payment_list') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+File: .\migrations\env.py
+import logging
+from logging.config import fileConfig
+
+from flask import current_app
+
+from alembic import context
+
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
+config = context.config
+
+# Interpret the config file for Python logging.
+# This line sets up loggers basically.
+fileConfig(config.config_file_name)
+logger = logging.getLogger('alembic.env')
+
+
+def get_engine():
+    try:
+        # this works with Flask-SQLAlchemy<3 and Alchemical
+        return current_app.extensions['migrate'].db.get_engine()
+    except (TypeError, AttributeError):
+        # this works with Flask-SQLAlchemy>=3
+        return current_app.extensions['migrate'].db.engine
+
+
+def get_engine_url():
+    try:
+        return get_engine().url.render_as_string(hide_password=False).replace(
+            '%', '%%')
+    except AttributeError:
+        return str(get_engine().url).replace('%', '%%')
+
+
+# add your model's MetaData object here
+# for 'autogenerate' support
+# from myapp import mymodel
+# target_metadata = mymodel.Base.metadata
+config.set_main_option('sqlalchemy.url', get_engine_url())
+target_db = current_app.extensions['migrate'].db
+
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
+
+
+def get_metadata():
+    if hasattr(target_db, 'metadatas'):
+        return target_db.metadatas[None]
+    return target_db.metadata
+
+
+def run_migrations_offline():
+    """Run migrations in 'offline' mode.
+
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
+
+    Calls to context.execute() here emit the given string to the
+    script output.
+
+    """
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(
+        url=url, target_metadata=get_metadata(), literal_binds=True
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online():
+    """Run migrations in 'online' mode.
+
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
+
+    """
+
+    # this callback is used to prevent an auto-migration from being generated
+    # when there are no changes to the schema
+    # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
+    def process_revision_directives(context, revision, directives):
+        if getattr(config.cmd_opts, 'autogenerate', False):
+            script = directives[0]
+            if script.upgrade_ops.is_empty():
+                directives[:] = []
+                logger.info('No changes in schema detected.')
+
+    conf_args = current_app.extensions['migrate'].configure_args
+    if conf_args.get("process_revision_directives") is None:
+        conf_args["process_revision_directives"] = process_revision_directives
+
+    connectable = get_engine()
+
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=get_metadata(),
+            **conf_args
+        )
+
+        with context.begin_transaction():
+            context.run_migrations()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+
+==================================================
+
+File: .\migrations\versions\776310293289_initial_migration.py
+"""Initial migration
+
+Revision ID: 776310293289
+Revises: 
+Create Date: 2025-09-13 15:02:58.525859
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision = '776310293289'
+down_revision = None
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.create_table('user',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('username', sa.String(length=64), nullable=False),
+    sa.Column('email', sa.String(length=120), nullable=False),
+    sa.Column('password_hash', sa.String(length=256), nullable=False),
+    sa.Column('role', sa.String(length=20), nullable=False),
+    sa.Column('active', sa.Boolean(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_user_email'), ['email'], unique=True)
+        batch_op.create_index(batch_op.f('ix_user_username'), ['username'], unique=True)
+
+    op.create_table('staff',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('phone', sa.String(length=20), nullable=True),
+    sa.Column('specialization', sa.String(length=50), nullable=True),
+    sa.Column('joining_date', sa.DateTime(), nullable=False),
+    sa.Column('salary', sa.Float(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id')
+    )
+    op.create_table('student',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('full_name', sa.String(length=100), nullable=False),
+    sa.Column('age', sa.Integer(), nullable=False),
+    sa.Column('contact_number', sa.String(length=20), nullable=True),
+    sa.Column('address', sa.String(length=200), nullable=True),
+    sa.Column('guardian_name', sa.String(length=100), nullable=True),
+    sa.Column('emergency_contact', sa.String(length=20), nullable=True),
+    sa.Column('class_type', sa.String(length=50), nullable=False),
+    sa.Column('registration_date', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id')
+    )
+    op.create_table('batch',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('staff_id', sa.Integer(), nullable=False),
+    sa.Column('fee_monthly', sa.Float(), nullable=False),
+    sa.Column('fee_quarterly', sa.Float(), nullable=True),
+    sa.ForeignKeyConstraint(['staff_id'], ['staff.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('batch', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_batch_name'), ['name'], unique=False)
+
+    op.create_table('attendance',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('student_id', sa.Integer(), nullable=False),
+    sa.Column('batch_id', sa.Integer(), nullable=False),
+    sa.Column('date', sa.Date(), nullable=False),
+    sa.Column('present', sa.Boolean(), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('student_id', 'batch_id', 'date', name='uix_attendance')
+    )
+    op.create_table('payment',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('student_id', sa.Integer(), nullable=False),
+    sa.Column('batch_id', sa.Integer(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('due_date', sa.Date(), nullable=True),
+    sa.Column('paid_date', sa.Date(), nullable=True),
+    sa.Column('status', sa.String(length=20), nullable=False),
+    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('student_batch',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('student_id', sa.Integer(), nullable=False),
+    sa.Column('batch_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['batch_id'], ['batch.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['student.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('student_id', 'batch_id', name='uix_student_batch')
+    )
+    # ### end Alembic commands ###
+
+
+def downgrade():
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('student_batch')
+    op.drop_table('payment')
+    op.drop_table('attendance')
+    with op.batch_alter_table('batch', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_batch_name'))
+
+    op.drop_table('batch')
+    op.drop_table('student')
+    op.drop_table('staff')
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_user_username'))
+        batch_op.drop_index(batch_op.f('ix_user_email'))
+
+    op.drop_table('user')
+    # ### end Alembic commands ###
+
+==================================================
+
